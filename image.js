@@ -1,17 +1,19 @@
 'use strict'
 
 function main() {
-  const matrix = LedMatrix(60, 40, 8, 2)
+
+  const width = 60
+  const height = 40
 
   function loadImage(url, contrastThreshold, callback) {
     const img = new Image()
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      canvas.width = matrix.width
-      canvas.height = matrix.height
+      canvas.width = width
+      canvas.height = height
       const ctx = canvas.getContext('2d')
 
-      const [w, h] = calculateAspectRatioFit(img.width, img.height, matrix.width, matrix.height)
+      const [w, h] = calculateAspectRatioFit(img.width, img.height, width, height)
       ctx.drawImage(img, 0, 0, w, h)
 
       const pixels = ctx.getImageData(0, 0, w, h).data
@@ -22,16 +24,17 @@ function main() {
   }
 
   loadImage('mm.jpg', undefined, pixels => {
-    let x = matrix.width
-    function update() {
-      matrix.clear()
+
+    let x = width
+
+    function update(matrix) {
       matrix.image(pixels, x, 0)
       x--
       if(x < -pixels[0].length)
-        x = matrix.width
+        x = width
     }
 
-    window.setInterval(update, 75)
+    LedMatrix(width, height, 8, 2, update, 0)
   })
 }
 

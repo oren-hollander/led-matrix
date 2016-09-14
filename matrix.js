@@ -4,7 +4,7 @@ function px(pixels) {
   return pixels + "px"
 }
 
-function LedMatrix(width, height, ledSize, padding) {
+function LedMatrix(width, height, ledSize, padding, update, delay) {
 
   const leds = []
 
@@ -45,28 +45,19 @@ function LedMatrix(width, height, ledSize, padding) {
       offLed.style.height = px(ledSize)
       offLed.style.backgroundColor = '#401010'
       offLed.style.borderRadius = px(ledSize / 2)
-      row.push({onLed, visible: false})
+      row.push(onLed)
     }
   }
 
-  function render() {
-    for(let y = 0; y < height; y++)
-      for(let x = 0; x < width; x++) {
-        const led = leds[y][x]
-        led.onLed.style.visibility = led.visible ? '' : 'hidden'
-      }
+  function show(x, y) {
+    leds[y][x].style.visibility = ''
   }
 
-  function clear(){
-    for(let x = 0; x < width; x++)
-      for(let y = 0; y < height; y++)
-        pixel(x, y, false)
+  function hide(x, y) {
+    leds[y][x].style.visibility = 'hidden'
   }
 
-  function pixel(x, y, on = true){
-    if(x >= 0 && x < width && y >= 0 && y < height)
-      leds[y][x].visible = on
-  }
+  const ledImage = LedImage(width, height)
 
   function line (x1, y1, x2, y2, on = true) {
     var dx = Math.abs(x2 - x1)
@@ -75,7 +66,7 @@ function LedMatrix(width, height, ledSize, padding) {
     var sy = (y1 < y2) ? 1 : -1
     var err = dx - dy
 
-    pixel(x1, y1, on)
+    ledImage.pixel(x1, y1, on)
 
     while (!((x1 == x2) && (y1 == y2))) {
       var e2 = err << 1
@@ -88,7 +79,7 @@ function LedMatrix(width, height, ledSize, padding) {
         y1 += sy
       }
 
-      pixel(x1, y1, on)
+      ledImage.pixel(x1, y1, on)
     }
   }
 
@@ -99,7 +90,7 @@ function LedMatrix(width, height, ledSize, padding) {
         const row = ascii[charCode][py]
         for(let px = 0; px < fontWidth; px++){
           const pOn = ((row >> px) & 1) !== 0
-          pixel(x + (fontWidth - 1 - px), y + py, on ? pOn : !pOn)
+          ledImage.pixel(x + (fontWidth - 1 - px), y + py, on ? pOn : !pOn)
         }
       }
     }
@@ -120,21 +111,42 @@ function LedMatrix(width, height, ledSize, padding) {
   function image(img, x = 0, y = 0, on = true) {
     for(let py = 0; py < img.length; py++){
       for(let px = 0; px < img[py].length; px++){
-        pixel(x + px, y + py, on ? img[py][px] : !img[py][px])
+        ledImage.pixel(x + px, y + py, on ? img[py][px] : !img[py][px])
       }
     }
   }
 
-  function refresh() {
-    render()
+  function setDelay(d) {
+    delay = d
+  }
+
+  const api = {
+    pixel: ledImage.pixel, line, text, image, setDelay
+  }
+
+  var pts = null;
+
+  function refresh(ts) {
+    if(!pts)
+      pts = ts
+
+    if (ts - pts >= delay) {
+      update(api)
+      ledImage.patch().forEach(({x, y, op}) => {
+        if(op)
+          show(x, y)
+        else
+          hide(x, y)
+      })
+      ledImage.flip()
+
+      pts = ts
+    }
+
     window.requestAnimationFrame(refresh)
   }
 
   window.requestAnimationFrame(refresh)
-
-  return {
-    width, height, clear, pixel, line, text, image
-  }
 }
 
 

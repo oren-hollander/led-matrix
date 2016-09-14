@@ -2,12 +2,13 @@
 
 function main() {
 
-  const matrix = LedMatrix(60, 40, 8, 2)
+  const width = 60
+  const height = 40
 
   const canvas = document.createElement('canvas')
   canvas.style.border = '1px solid blue'
-  canvas.width = matrix.width
-  canvas.height = matrix.height
+  canvas.width = width
+  canvas.height = height
 
   var ctx = canvas.getContext('2d')
 
@@ -17,15 +18,14 @@ function main() {
   video.src = 'la-linea.webm'
 
   video.addEventListener('play', () => {
-    const [w, h] = calculateAspectRatioFit(video.videoWidth, video.videoHeight, matrix.width, matrix.height)
+    const [w, h] = calculateAspectRatioFit(video.videoWidth, video.videoHeight, width, height)
     canvas.style.position = 'absolute'
     canvas.style.width = px(w * 8)
     canvas.style.height = px(h * 8)
     canvas.style.left = px(w * 15)
 
-    function draw() {
+    function draw(matrix) {
       if(video.ended) {
-        matrix.clear()
         matrix.text('The End')
         return false;
       }
@@ -34,10 +34,9 @@ function main() {
       const data = ctx.getImageData(0, 0, w, h).data
       const pixels = imageDataToPixels(data, w, h, 0.3)
       matrix.image(pixels, 0, 0)
-      setTimeout(draw, 20);
     }
 
-    draw()
+    LedMatrix(60, 40, 8, 2, draw, 50)
   })
 
   video.addEventListener('loadedmetadata', () => {

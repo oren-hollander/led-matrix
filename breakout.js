@@ -3,6 +3,7 @@
 function main() {
 
   const width = 60
+  const height = 40
   const paddleWidth = 5
   const brickRows = 8
   const brickCols = 15
@@ -16,8 +17,7 @@ function main() {
   let won
   let pause
   let autoPilot
-  let speed
-  const matrix = LedMatrix(width, 40, 8, 2)
+  let delay
 
   document.body.addEventListener('keydown', e => {
     if((lost || won) && e.keyCode === 32) {
@@ -52,7 +52,7 @@ function main() {
     paddle = width / 2
     ball.x =  width / 2
     ball.y =  17
-    speed = 100
+    delay = 100
 
     for(let y = 0; y < brickRows; y++) {
       bricks[y] = []
@@ -66,22 +66,22 @@ function main() {
     return {left: x * brickWidth, right: (x + 1) * brickWidth - 1, y: y + 5}
   }
 
-  function drawBrick(x, y) {
+  function drawBrick(matrix, x, y) {
     const {left, right, y: brickY} = brickBounds(x, y)
     matrix.line(left, brickY, right, brickY, bricks[y][x])
   }
 
-  function drawBricks() {
+  function drawBricks(matrix) {
     for (let x = 0; x < brickCols; x++)
       for (let y = 0; y < brickRows; y++)
-        drawBrick(x, y)
+        drawBrick(matrix, x, y)
   }
 
-  function drawPaddle() {
+  function drawPaddle(matrix) {
     matrix.line(paddle - Math.floor(paddleWidth / 2), paddleY, paddle + Math.floor(paddleWidth / 2), paddleY)
   }
 
-  function drawBall() {
+  function drawBall(matrix) {
     matrix.line(ball.x, ball.y, ball.x, ball.y)
   }
 
@@ -136,10 +136,10 @@ function main() {
     }
   }
 
-  function draw(){
-    drawBricks()
-    drawPaddle()
-    drawBall()
+  function draw(matrix){
+    drawBricks(matrix)
+    drawPaddle(matrix)
+    drawBall(matrix)
   }
 
   function left(x = 1) {
@@ -159,18 +159,16 @@ function main() {
       left(paddle - ball.x)
   }
 
-  function update(){
+  function update(matrix){
     if(lost){
-      matrix.clear()
       matrix.text("Loser!")
     }
     else if(won){
-      matrix.clear()
       matrix.text("Winner!")
     }
     else {
-      matrix.clear()
-      draw()
+      matrix.setDelay(delay)
+      draw(matrix)
       moveBall()
       detectPaddleHit()
       detectWallHit()
@@ -180,15 +178,13 @@ function main() {
       detectWinning()
       detectLosing()
     }
-
-    window.setTimeout(update, speed)
   }
 
   window.setInterval(() => {
-    if(!pause && speed > 0)
-      speed -= 1
+    if(!pause && delay > 0)
+      delay -= 1
   }, 1000)
 
   init()
-  update()
+  LedMatrix(width, height, 8, 2, update, delay)
 }
