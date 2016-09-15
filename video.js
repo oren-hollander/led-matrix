@@ -2,8 +2,8 @@
 
 function main() {
 
-  const width = 60
-  const height = 40
+  const width = 32
+  const height = 24
 
   const canvas = document.createElement('canvas')
   canvas.style.border = '1px solid blue'
@@ -17,18 +17,18 @@ function main() {
   video.muted = true
   video.src = 'la-linea.webm'
 
-  const padIndex = (i) => ("00" + i).substr(-2, 2)
+  // const padIndex = (i) => ("00" + i).substr(-2, 2)
+
+  const coord = (n) => String.fromCharCode(33 + n);
+  const charForCode = (n) => String.fromCharCode(33 + 32 + n);
 
   video.addEventListener('play', () => {
     const [w, h] = calculateAspectRatioFit(video.videoWidth, video.videoHeight, width, height)
-    canvas.style.position = 'absolute'
-    canvas.style.width = px(w * 8)
-    canvas.style.height = px(h * 8)
-    canvas.style.left = px(w * 15)
 
     function draw(matrix) {
-      if(video.ended) {
-        matrix.text('The End')
+      if (video.ended) {
+        matrix.text('The', undefined, 4);
+        matrix.text('End', undefined, 14);
         matrix.stop();
         return
       }
@@ -41,13 +41,24 @@ function main() {
 
     let recorderVideo = []
 
-    const encodePatch = patch => patch.map(({op, x, y, shortcut}) => {
-      const opStr = (op ? 1 : 0)
-      if(shortcut)
-        return shortcut + opStr
-      else
-        return padIndex(x) + padIndex(y) + opStr
-    }).join('')
+    function encodePatches(patch) {
+      return patch.map(({x, y, shortcut}) => {
+        if (shortcut)
+          return shortcut;
+        else
+          return coord(x) + coord(y);
+      }).join('');
+    }
+
+    function encodePatch(patch) {
+      const onPatches = patch.filter((p) => p.op);
+      const offPatches = patch.filter((p) => !p.op);
+
+      setPatchShortcuts(onPatches);
+      setPatchShortcuts(offPatches);
+
+      return encodePatches(onPatches) + charForCode(9) + encodePatches(offPatches);
+    }
 
     function setPatchShortcuts(patch) {
       for(let i = patch.length - 1; i > 0; i--){
@@ -57,21 +68,21 @@ function main() {
         const dy = n.y - p.y
 
         if(dx === -1 && dy === -1)
-          patch[i].shortcut = 'a'
+          patch[i].shortcut = charForCode(1);
         else if(dx === 0 && dy === -1)
-          patch[i].shortcut = 'b'
+          patch[i].shortcut = charForCode(2);
         else if(dx === 1 && dy === -1)
-          patch[i].shortcut = 'c'
+          patch[i].shortcut = charForCode(3);
         else if(dx === 1 && dy === 0)
-          patch[i].shortcut = 'd'
+          patch[i].shortcut = charForCode(4);
         else if(dx === 1 && dy === 1)
-          patch[i].shortcut = 'e'
+          patch[i].shortcut = charForCode(5);
         else if(dx === 0 && dy === 1)
-          patch[i].shortcut = 'f'
+          patch[i].shortcut = charForCode(6);
         else if(dx === -1 && dy === 1)
-          patch[i].shortcut = 'g'
+          patch[i].shortcut = charForCode(7);
         else if(dx === -1 && dy === 0)
-          patch[i].shortcut = 'h'
+          patch[i].shortcut = charForCode(8);
       }
     }
 
@@ -79,17 +90,18 @@ function main() {
 
     const recorder = patch => {
       if(patch.length > 0) {
-        setPatchShortcuts(patch)
-        recorderVideo[frame] = encodePatch(patch)
+        recorderVideo[frame] = patch;
       }
       frame++
     }
 
     function onComplete() {
-      console.log(recorderVideo)
+      recorderVideo = recorderVideo.map(encodePatch);
+      const buf = recorderVideo.join(charForCode(10));
+      console.log(buf.length)
     }
 
-    LedMatrix(60, 40, 8, 2, draw, 200, recorder, onComplete)
+    LedMatrix(width, height, 8, 2, draw, 200, recorder, onComplete)
   })
 
   video.addEventListener('loadedmetadata', () => {
