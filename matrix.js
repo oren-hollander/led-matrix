@@ -4,7 +4,7 @@ function px(pixels) {
   return pixels + "px"
 }
 
-function LedMatrix(width, height, ledSize, padding, update, delay) {
+function LedMatrix(width, height, ledSize, padding, update, delay, recorder, onComplete) {
 
   const leds = []
 
@@ -120,19 +120,29 @@ function LedMatrix(width, height, ledSize, padding, update, delay) {
     delay = d
   }
 
+  let stopped = false
+
+  function stop() {
+    stopped = true
+  }
+
   const api = {
-    pixel: ledImage.pixel, line, text, image, setDelay
+    pixel: ledImage.pixel, line, text, image, setDelay, stop
   }
 
   var pts = null;
-
   function refresh(ts) {
     if(!pts)
       pts = ts
 
     if (ts - pts >= delay) {
       update(api)
-      ledImage.patch().forEach(({x, y, op}) => {
+      const p = ledImage.patch()
+
+      if(recorder)
+        recorder(p)
+
+      p.forEach(({x, y, op}) => {
         if(op)
           show(x, y)
         else
@@ -143,7 +153,10 @@ function LedMatrix(width, height, ledSize, padding, update, delay) {
       pts = ts
     }
 
-    window.requestAnimationFrame(refresh)
+    if(!stopped)
+      window.requestAnimationFrame(refresh)
+    else
+      onComplete()
   }
 
   window.requestAnimationFrame(refresh)
