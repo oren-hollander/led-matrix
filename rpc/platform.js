@@ -1,15 +1,21 @@
 'use strict'
 
-require(['message-rpc'], (MessageRPC) => {
-  const api = {
-    add: (a, b) => a + b,
-    div: (a, b) => {
-      if (b === 0)
-        throw 'division by zero error'
+require(['message-rpc', 'promise-util', 'api-util'], (MessageRPC, {ApiSymbol}, {defineApi}) => {
 
-      return a / b
-    }
-  }
+  // const api = {
+  //   add: (a, b) => a + b,
+  //   div: (a, b) => {
+  //     if (b === 0)
+  //       throw 'division by zero error'
+  //
+  //     return a / b
+  //   },
+  //   test: () => {
+  //     return defineApi({f: a => a * a})
+  //   }
+  // }
 
-  MessageRPC(api, new Worker('app.js'))
+  MessageRPC({}, new Worker('app.js')).then(appApi => {
+    appApi.initApp('hello', defineApi({test: message => {console.log('at platform', message)}}))
+  })
 })

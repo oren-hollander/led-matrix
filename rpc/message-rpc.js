@@ -1,68 +1,107 @@
 'use strict'
 
-define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi}) => {
+define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util'],
+  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi}, Stubs, {ApiSymbol}) => {
 
   function MessageRPC(localApi, worker) {
     let initialized = false
-    let queue = Queue()
+    let queue = Queue(sendBatch)
     const settlers = new Map()
-    localApi = promisifyApi(localApi)
+    const localApiStub = Stubs.add(promisifyApi(localApi))
 
-    function sendQueue() {
-      sendMessage(batch(queue.drain()))
-    }
+    sendMessage(Messages.init(Object.keys(localApi)))
 
     function onInit(remoteApi) {
       if(!initialized){
-        // console.log('initialized')
         initialized = true
         sendMessage(Messages.init(Object.keys(localApi)))
-        const proxy = ApiProxy(remoteApi, handleOutgoingCall)
+        const proxy = ApiProxy(remoteApi, localApiStub, handleOutgoingCall)
         resolveProxy(proxy)
       }
     }
 
-    function handleOutgoingCall(id, func, args, callPriority, returnPriority, settler) {
-      // console.log('outgoing call', id, func, args, callPriority, returnPriority)
+    function sendBatch(rpcMessages) {
+      sendMessage(Messages.batch(rpcMessages))
+    }
+
+    // todo: shouldn't add twice the same api
+    function processOutgoingRpcValue(value) {
+      if(value && value[ApiSymbol]){
+        const stub = Stubs.add(promisifyApi(value))
+        return Messages.rpcApiValue(Object.keys(value), stub)
+      }
+      else {
+        return Messages.rpcDataValue(value)
+      }
+    }
+
+    function handleOutgoingCall(id, stub, func, args, callPriority, returnPriority, settler) {
+      console.log('outgoing call', id, func, args, callPriority, returnPriority)
+      if(returnPriority === MessagePriorities.None)
+        settler.resolve()
+      else
+        settlers.set(id, settler)
+
+      const rpcMessage = Messages.rpcCall(id, stub, func, args.map(processOutgoingRpcValue), returnPriority)
+
       if(callPriority === MessagePriorities.Immediate){
-        if(returnPriority === MessagePriorities.None)
-          settler.resolve()
-        else
-          settlers.set(id, settler)
-
-        sendMessage(Messages.batch([Messages.call(id, func, args, returnPriority)]))
+        sendMessage(Messages.batch([rpcMessage]))
+      }
+      else {
+        queue.add(rpcMessage, callPriority)
       }
     }
 
-    function handleOutgoingReturn(result, id, returnPriority) {
+    function handleOutgoingReturn(result, id, stub, returnPriority) {
+
+      let rpcMessage = Messages.rpcReturn(id, stub, processOutgoingRpcValue(result))
+
       if(returnPriority === MessagePriorities.Immediate){
-        const rpcMessage = Messages.result(id, result)
         sendMessage(Messages.batch([rpcMessage]))
+      }
+      else {
+        queue.add(rpcMessage, returnPriority)
       }
     }
 
-    function handleOutgoingError(error, id, returnPriority) {
+    function handleOutgoingError(error, id, stub, returnPriority) {
+      const rpcMessage = Messages.rpcError(id, stub, error)
+
       if(returnPriority === MessagePriorities.Immediate){
-        const rpcMessage = Messages.error(id, error)
         sendMessage(Messages.batch([rpcMessage]))
+      }
+      else {
+        queue.add(rpcMessage, returnPriority)
+      }
+    }
+
+    function processIncomingRpcValue(value) {
+      switch(value.type) {
+        case Messages.Types.DataValue:
+          return value.data
+        case Messages.Types.ApiValue:
+          return ApiProxy(value.api, value.stub, handleOutgoingCall)
+          break
+        default:
+          throw `Unknown type: ${value.type}`
       }
     }
 
     function handleIncomingCall(callMessage) {
-      // console.log('incoming call', callMessage.id, callMessage.func, callMessage.args, callMessage.returnPriority)
-      localApi[callMessage.func](... callMessage.args)
+      console.log('incoming call', callMessage.id, callMessage.stub, callMessage.func, callMessage.args, callMessage.returnPriority)
+      Stubs.get(callMessage.stub)[callMessage.func](... callMessage.args.map(processIncomingRpcValue))
         .then(result => {
-          handleOutgoingReturn(result, callMessage.id, callMessage.returnPriority)
+          handleOutgoingReturn(result, callMessage.id, callMessage.stub, callMessage.returnPriority)
         })
         .catch(error => {
-          handleOutgoingError(error, callMessage.id, callMessage.returnPriority)
+          handleOutgoingError(error, callMessage.id, callMessage.stub, callMessage.returnPriority)
         })
     }
 
     function handleIncomingReturn(returnMessage) {
       const settler = settlers.get(returnMessage.id)
       settlers.delete(returnMessage.id)
-      settler.resolve(returnMessage.value)
+      settler.resolve(processIncomingRpcValue(returnMessage.value))
     }
 
     function handleIncomingError(errorMessage) {
@@ -86,7 +125,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
     }
 
     worker.onmessage = ({data}) => {
-      // console.log('message received at', master ? 'master' : 'slave', data)
+      console.log('message ', data)
       const message = Messages.deserialize(data)
       switch (message.type) {
         case Messages.Types.Init:
@@ -99,8 +138,6 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
           throw 'Unknown message!'
       }
     }
-
-    sendMessage(Messages.init(Object.keys(localApi)))
 
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler()
     return proxyPromise
