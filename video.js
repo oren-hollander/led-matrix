@@ -2,8 +2,8 @@
 
 function main() {
 
-  const width = 32
-  const height = 24
+  const width = 80
+  const height = 60
 
   const canvas = document.createElement('canvas')
   canvas.style.border = '1px solid blue'
