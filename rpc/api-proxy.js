@@ -10,43 +10,26 @@ define(['priority', 'promise-util'], ({CallPriority, ReturnPriority, MessagePrio
   }
 
   function ApiProxy(remoteApi, callHandler) {
-    // const handler = {
-    //   get: (target, name) => {
-    //     if(name === CallPriority || name === ReturnPriority) {
-    //       return target[name]
-    //     }
-    //     if(name === 'then')
-    //       return
-    //
-    //     return (...args) => {
-    //       const {promise, resolve, reject} = createPromiseWithSettler()
-    //       callHandler(nextCallId(), name, args, target[CallPriority], target[ReturnPriority], {resolve, reject})
-    //       return promise
-    //     }
-    //   },
-    //   set: (target, property, value) => {
-    //     if(property === CallPriority || property === ReturnPriority)
-    //       target[property] = value
-    //     return true
-    //   }
-    // }
+    const api = {}
+    api[CallPriority] = MessagePriorities.Medium
+    api[ReturnPriority] = MessagePriorities.Medium
 
-    // const proxy = new Proxy({}, handler)
-    // proxy[CallPriority] = MessagePriorities.Medium
-    // proxy[ReturnPriority] = MessagePriorities.Medium
+    function getPriority(func, prioritySymbol) {
+      if(func[prioritySymbol])
+        return func[prioritySymbol]
+      return api[prioritySymbol]
+    }
+
     return remoteApi.reduce((api, func) => {
 
       const apiFunction = (...args) => {
         const {promise, resolve, reject} = createPromiseWithSettler()
-        callHandler(nextCallId(), func, args, apiFunction[CallPriority], apiFunction[ReturnPriority], {resolve, reject})
+        callHandler(nextCallId(), func, args, getPriority(apiFunction, CallPriority), getPriority(apiFunction, ReturnPriority), {resolve, reject})
         return promise
       }
 
-      apiFunction[CallPriority] = MessagePriorities.Medium
-      apiFunction[ReturnPriority] = MessagePriorities.Medium
-
       return Object.assign(api, {[func]: apiFunction})
-    }, {})
+    }, api)
   }
 
   return ApiProxy

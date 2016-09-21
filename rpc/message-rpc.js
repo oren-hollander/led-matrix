@@ -14,7 +14,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
 
     function onInit(remoteApi) {
       if(!initialized){
-        console.log('initialized')
+        // console.log('initialized')
         initialized = true
         sendMessage(Messages.init(Object.keys(localApi)))
         const proxy = ApiProxy(remoteApi, handleOutgoingCall)
@@ -23,6 +23,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
     }
 
     function handleOutgoingCall(id, func, args, callPriority, returnPriority, settler) {
+      // console.log('outgoing call', id, func, args, callPriority, returnPriority)
       if(callPriority === MessagePriorities.Immediate){
         if(returnPriority === MessagePriorities.None)
           settler.resolve()
@@ -31,7 +32,6 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
 
         sendMessage(Messages.batch([Messages.call(id, func, args, returnPriority)]))
       }
-      console.log('handling call', id, func, args, callPriority, returnPriority)
     }
 
     function handleOutgoingReturn(result, id, returnPriority) {
@@ -49,6 +49,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util'], (Queue, M
     }
 
     function handleIncomingCall(callMessage) {
+      // console.log('incoming call', callMessage.id, callMessage.func, callMessage.args, callMessage.returnPriority)
       localApi[callMessage.func](... callMessage.args)
         .then(result => {
           handleOutgoingReturn(result, callMessage.id, callMessage.returnPriority)
