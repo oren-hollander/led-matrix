@@ -1,7 +1,8 @@
 'use strict'
 
-define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util'],
-  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi}, Stubs, {ApiSymbol}) => {
+define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer'],
+  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi}, Stubs, {ApiSymbol},
+  Serializer) => {
 
   function MessageRPC(localApi, worker) {
     let initialized = false
@@ -121,12 +122,13 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
     }
 
     function sendMessage(message) {
-      worker.postMessage(Messages.serialize(message))
+      const {message: messageData, transferList} = Serializer.serialize(message)
+      worker.postMessage(messageData, transferList)
     }
 
     worker.onmessage = ({data}) => {
       console.log('message ', data)
-      const message = Messages.deserialize(data)
+      const message = Serializer.deserialize(data)
       switch (message.type) {
         case Messages.Types.Init:
           onInit(message.api)

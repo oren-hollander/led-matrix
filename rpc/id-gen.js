@@ -2,12 +2,12 @@
 
 define([], () => {
 
-  function IdGenerator(prefix) {
+  function IdGenerator() {
     let id = 0
 
     function uniqueId() {
       id++
-      return `${prefix}_${id}`
+      return id
     }
 
     return {uniqueId}

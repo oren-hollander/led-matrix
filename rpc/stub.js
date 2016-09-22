@@ -1,7 +1,7 @@
 'use strict'
 
 define(['id-gen'], (IdGenerator) => {
-  const idGen = IdGenerator('stub')
+  const idGen = IdGenerator()
 
   const stubs = {}
 

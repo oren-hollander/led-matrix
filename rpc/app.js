@@ -25,7 +25,8 @@ require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority,
     }
   }
 
-  MessageRPC(appApi, self).then(platform => {
+  MessageRPC(appApi, self)
+    // .then(platform => {
     // platform.test().then(innerApi => {
     //   innerApi.f(4).then(print)
     // })
@@ -46,5 +47,5 @@ require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority,
     //
     // platform.div(1, 2).then(print).catch(error)
     // platform.div(1, 0).then(print).catch(error)
-  })
+  // })
 })

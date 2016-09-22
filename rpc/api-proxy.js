@@ -3,7 +3,7 @@
 define(['priority', 'promise-util', 'id-gen', 'api-util'],
   ({CallPriority, ReturnPriority, MessagePriorities}, {createPromiseWithSettler}, IdGenerator, {ApiSymbol}) => {
 
-  const idGen = IdGenerator('call')
+  const idGen = IdGenerator()
 
   function ApiProxy(remoteApi, stub, callHandler) {
     const api = {
