@@ -1,6 +1,6 @@
 'use strict'
 
-require(['message-rpc', 'promise-util', 'api-util', '../garbage/test'], (MessageRPC, {ApiSymbol}, {defineApi}) => {
+require(['message-rpc', 'promise-util', 'api-util'], (MessageRPC, {ApiSymbol}, {defineApi}) => {
 
   // const api = {
   //   add: (a, b) => a + b,
@@ -19,5 +19,13 @@ require(['message-rpc', 'promise-util', 'api-util', '../garbage/test'], (Message
   //   appApi.initApp('hello', defineApi({test: message => {console.log('at platform', message)}}))
   // })
 
+  const c = new WeakSet()
+  const a = {a: 42}
+  c.add(a)
 
+  function printSet() {
+    console.log(c)
+    setTimeout(printSet, 1000)
+  }
+  printSet()
 })

@@ -1,6 +1,6 @@
 'use strict'
 
-define(['messages', 'binary-serializer', 'proto-buf'], (Messages, BinarySerializer) => {
+define(['messages', 'binary-serializer', '../buffer/proto-buf'], (Messages, BinarySerializer) => {
 
   const jsonSerializer = {
     serialize: value => ({message: JSON.stringify(value), transferList: []}),

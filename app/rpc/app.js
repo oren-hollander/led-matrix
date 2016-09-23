@@ -1,6 +1,6 @@
 'use strict'
 
-importScripts('/require.js')
+importScripts('../require.js')
 
 require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority, MessagePriorities}) => {
 

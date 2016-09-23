@@ -1,6 +1,6 @@
 'use strict'
 
-define([], () => {
+define(['priority'], ({MessagePriorities}) => {
   const MessageTypes = {
     Init: 'init',
     Batch: 'batch',
@@ -24,92 +24,112 @@ define([], () => {
   const isReturn = rpcMessage => rpcMessage.type === MessageTypes.Return
   const isError = rpcMessage => rpcMessage.type === MessageTypes.Error
 
-  const messagesProtocol = {
-    MessageType: {
-      enum: [MessageTypes.Init, MessageTypes.Batch],
-    },
-    RpcMessageType: {
-      enum: [MessageTypes.Call, MessageTypes.Return, MessageTypes.Error]
-    },
-    RpcValueType: {
-      enum: [MessageTypes.DataValue, MessageTypes.ApiValue]
-    },
-    Priority: {
-      enum: ['Immediate', 'High', 'Medium', 'Low', 'None']
-    },
-
-    RpcDataValue: {
-      struct: {
-        type: 'RpcValueType',
-        data: 'string'
-      }
-    },
-
-    RpcApiValue: {
-      struct: {
-        type: 'RpcValueType',
-        api: {array: 'string'},
-        stub: 'uint32'
-      }
-    },
-
-    RpcValue: {
-      union: {
-        [MessageTypes.DataValue]: 'RpcDataValue',
-        [MessageTypes.ApiValue]: 'RpcApiValue'
-      }
-    },
-
-    RpcCall: {
-      struct: {
-        type: 'RpcMessageType',
-        id: 'uint32',
-        stub: 'uint16',
-        func: 'string',
-        args: {array: 'RpcValue'},
-        returnPriority: 'Priority'
-      }
-    },
-
-    RpcReturn: {
-      type: 'RpcMessageType',
-      id: 'uint32',
-      stub: 'uint16',
-      value: 'RpcValue'
-    },
-
-    RpcError: {
-      type: 'RpcMessageType',
-      id: 'uint32',
-      stub: 'uint16',
-      error: 'string'
-    },
-
-    RpcMessage: {
-      union: {}
-    },
-
-    BatchMessage: {
-      struct: {
-        type: 'MessageType',
-        rpcMessages: {array: 'RpcMessage'}
-      }
-    },
-
-    InitMessage: {
-      struct: {
-        type: 'MessageType',
-        api: {array: 'string'}
-      }
-    },
-
+  const messageProtocol = {
     Message: {
-      union: {
-        [MessageTypes.Init]: 'InitMessage',
-        [MessageTypes.Batch]: 'BatchMessage'
+      MessageType: {
+        enum: [MessageTypes.Init, MessageTypes.Batch],
+      },
+      RpcMessageType: {
+        enum: [MessageTypes.Call, MessageTypes.Return, MessageTypes.Error]
+      },
+      RpcValueType: {
+        enum: [MessageTypes.DataValue, MessageTypes.ApiValue]
+      },
+      Priority: {
+        enum: [MessagePriorities.Immediate, MessagePriorities.High, MessagePriorities.Medium, MessagePriorities.Low, MessagePriorities.None]
+      },
+
+      RpcDataValue: {
+        struct: {
+          type: 'RpcValueType',
+          data: 'string'
+        }
+      },
+
+      RpcApiValue: {
+        struct: {
+          type: 'RpcValueType',
+          api: {array: 'string'},
+          stub: 'uint32'
+        }
+      },
+
+      RpcValue: {
+        union: {
+          tag: 'type',
+          cases: {
+            [MessageTypes.DataValue]: 'RpcDataValue',
+            [MessageTypes.ApiValue]: 'RpcApiValue'
+          }
+        }
+      },
+
+      RpcCall: {
+        struct: {
+          type: 'RpcMessageType',
+          id: 'uint32',
+          stub: 'uint16',
+          func: 'string',
+          args: {array: 'RpcValue'},
+          returnPriority: 'Priority'
+        }
+      },
+
+      RpcReturn: {
+        struct: {
+          type: 'RpcMessageType',
+          id: 'uint32',
+          stub: 'uint16',
+          value: 'RpcValue'
+        }
+      },
+
+      RpcError: {
+        struct: {
+          type: 'RpcMessageType',
+          id: 'uint32',
+          stub: 'uint16',
+          error: 'string'
+        }
+      },
+
+      RpcMessage: {
+        union: {
+          tag: 'type',
+          cases: {
+            [MessageTypes.Call]: 'RpcCall',
+            [MessageTypes.Return]: 'RpcReturn',
+            [MessageTypes.Error]: 'RpcError'
+          }
+        }
+      },
+
+      BatchMessage: {
+        struct: {
+          type: 'MessageType',
+          rpcMessages: {array: 'RpcMessage'}
+        }
+      },
+
+      InitMessage: {
+        struct: {
+          type: 'MessageType',
+          api: {array: 'string'}
+        }
+      },
+
+      Message: {
+        union: {
+          tag: 'type',
+          cases: {
+            [MessageTypes.Init]: 'InitMessage',
+            [MessageTypes.Batch]: 'BatchMessage'
+          }
+        }
       }
     }
   }
 
-  return {Types: MessageTypes, init, batch, rpcCall, rpcReturn, rpcError, rpcDataValue, rpcApiValue, isCall, isReturn, isError}
+  return {Types: MessageTypes, init, batch, rpcCall, rpcReturn, rpcError,
+    rpcDataValue, rpcApiValue, isCall, isReturn, isError, messageProtocol}
 })
