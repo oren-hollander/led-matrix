@@ -15,17 +15,8 @@ require(['message-rpc', 'promise-util', 'api-util'], (MessageRPC, {ApiSymbol}, {
   //   }
   // }
 
-  // MessageRPC({}, new Worker('app.js')).then(appApi => {
-  //   appApi.initApp('hello', defineApi({test: message => {console.log('at platform', message)}}))
-  // })
+  MessageRPC({}, new Worker('app.js')).then(appApi => {
+    appApi.initApp({x: 42}, defineApi({test: message => {console.log('at platform', message)}}))
+  })
 
-  const c = new WeakSet()
-  const a = {a: 42}
-  c.add(a)
-
-  function printSet() {
-    console.log(c)
-    setTimeout(printSet, 1000)
-  }
-  printSet()
 })

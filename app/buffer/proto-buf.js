@@ -1,6 +1,6 @@
 'use strict'
 
-define(['./buffer', '../rpc/messages'], ({BufferReader, BufferWriter}, {messageProtocol}) => {
+define(['./buffer'], ({BufferReader, BufferWriter}) => {
 
   const getProtocolName = protocol => {
     if(typeof protocol === 'string')
@@ -8,24 +8,6 @@ define(['./buffer', '../rpc/messages'], ({BufferReader, BufferWriter}, {messageP
     else
       return Object.keys(protocol)[0]
   }
-
-  // function compile(protocolDef) {
-  //   const protocol = {}
-  //
-  //   const rootProtocolName = getProtocolName(protocolDef)
-  //
-  //   const getProtocol = protocolName => {
-  //     return protocolDef[rootProtocolName][protocolName]
-  //   }
-  //
-  //   function append(protocol, protocolName) {
-  //     protocol[protocolName] = protocolDef
-  //   }
-  //
-  //   append(protocol, rootProtocolName)
-  //
-  //   return protocol
-  // }
 
   function encodeEnum(value, enumValues) {
     return enumValues.findIndex((v => v === value))
@@ -59,6 +41,11 @@ define(['./buffer', '../rpc/messages'], ({BufferReader, BufferWriter}, {messageP
           case 'float64':
           case 'string':
             return reader[protocolName]()
+          case 'json':
+            var json = readFromBuffer('string');
+            if(json === '')
+              return undefined
+            return JSON.parse(json)
           case 'array':
             const elementProtocol = protocol.array
             const length = reader.uint16()
@@ -101,97 +88,188 @@ define(['./buffer', '../rpc/messages'], ({BufferReader, BufferWriter}, {messageP
       return readFromBuffer(getProtocol(rootProtocolName))
     }
 
-    const write = (buf, value) => {
-      const writer = BufferWriter(buf)
+    function collect(value) {
+      const primitives = []
+      let size = 0
 
-      function writeToBuffer(protocol, value) {
+      const primitive = (writeFunc, value) => ({writeFunc, value})
+
+      function collectValue(protocol, value){
         const protocolName = getProtocolName(protocol)
         switch (protocolName) {
           case 'uint8':
+            primitives.push(primitive(protocolName, value))
+            size += 1
+            break
           case 'uint16':
+            primitives.push(primitive(protocolName, value))
+            size += 2
+            break
           case 'uint32':
+            primitives.push(primitive(protocolName, value))
+            size += 4
+            break
           case 'int8':
+            primitives.push(primitive(protocolName, value))
+            size += 1
+            break
           case 'int16':
+            primitives.push(primitive(protocolName, value))
+            size += 2
+            break
           case 'int32':
+            primitives.push(primitive(protocolName, value))
+            size += 4
+            break
           case 'float32':
+            primitives.push(primitive(protocolName, value))
+            size += 4
+            break
           case 'float64':
+            primitives.push(primitive(protocolName, value))
+            size += 8
+            break
           case 'string':
-            writer[protocolName](value)
+            value = value || ''
+            primitives.push(primitive(protocolName, value))
+            size += 2 + value.length * 2
+            break
+          case 'json':
+            collectValue('string', JSON.stringify(value))
             break
           case 'array':
             const elementProtocol = protocol.array
-            writer.uint16(value.length)
+            primitives.push(primitive('uint16', value.length))
+            size += 2
             for (let i = 0; i < value.length; i++) {
-              writeToBuffer(elementProtocol, value[i])
+              collectValue(elementProtocol, value[i])
             }
             break
           case 'enum':
             const enumValues = protocol.enum
-            writer.uint8(encodeEnum(value,enumValues))
+            size += 1
+            primitives.push(primitive('uint8', encodeEnum(value, enumValues)))
             break
           case 'struct':
             Object.keys(protocol.struct).forEach(key => {
               const fieldProtocol = protocol.struct[key]
-              writeToBuffer(fieldProtocol, value[key])
+              collectValue(fieldProtocol, value[key])
             })
             break
           case 'union':
             const tag = protocol.union.tag
             const unionCase = value[tag]
             const caseProtocol = protocol.union.cases[unionCase]
-            writeToBuffer(caseProtocol, value)
+            collectValue(caseProtocol, value)
             break
           default:
-            writeToBuffer(getProtocol(protocolName), value)
+            collectValue(getProtocol(protocolName), value)
         }
       }
 
-      writeToBuffer(getProtocol(rootProtocolName), value)
+      collectValue(getProtocol(rootProtocolName), value)
+      return {primitives, size}
+    }
+
+    const write = (value) => {
+      const {primitives, size} = collect(value)
+      const buf = new ArrayBuffer(size)
+      const writer = BufferWriter(buf)
+      primitives.forEach(({writeFunc, value}) => {
+        writer[writeFunc](value)
+      })
+
+      return buf
+      // function writeToBuffer(protocol, value) {
+      //   const protocolName = getProtocolName(protocol)
+      //   switch (protocolName) {
+      //     case 'uint8':
+      //     case 'uint16':
+      //     case 'uint32':
+      //     case 'int8':
+      //     case 'int16':
+      //     case 'int32':
+      //     case 'float32':
+      //     case 'float64':
+      //     case 'string':
+      //       writer[protocolName](value)
+      //       break
+      //     case 'array':
+      //       const elementProtocol = protocol.array
+      //       writer.uint16(value.length)
+      //       for (let i = 0; i < value.length; i++) {
+      //         writeToBuffer(elementProtocol, value[i])
+      //       }
+      //       break
+      //     case 'enum':
+      //       const enumValues = protocol.enum
+      //       writer.uint8(encodeEnum(value, enumValues))
+      //       break
+      //     case 'struct':
+      //       Object.keys(protocol.struct).forEach(key => {
+      //         const fieldProtocol = protocol.struct[key]
+      //         writeToBuffer(fieldProtocol, value[key])
+      //       })
+      //       break
+      //     case 'union':
+      //       const tag = protocol.union.tag
+      //       const unionCase = value[tag]
+      //       const caseProtocol = protocol.union.cases[unionCase]
+      //       writeToBuffer(caseProtocol, value)
+      //       break
+      //     default:
+      //       writeToBuffer(getProtocol(protocolName), value)
+      //   }
+      // }
+
+      // writeToBuffer(getProtocol(rootProtocolName), value)
     }
 
     return {read, write}
   }
 
-  const {read, write} = protocolCodec(messageProtocol)
-  const buf = new ArrayBuffer(1024 * 64)
+  // const {read, write} = protocolCodec(messageProtocol)
+  // const buf = new ArrayBuffer(1024 * 64)
 
-  const message = {type: 'batch', rpcMessages: [
-    {
-      type: 'call',
-      id: 1,
-      stub: 345,
-      func: 'myFunc',
-      args: [
-        {
-          type: 'data-value',
-          data: 'some json'
-        },
-        {
-          type: 'api-value',
-          api: ['a', 'b'],
-          stub: 123
-        }
-      ],
-      returnPriority: 'immediate'
-    },
-    {
-      type: 'return',
-      id: 1,
-      stub: 345,
-      value: {
-        type: 'data-value',
-        data: '52'
-      }
-    },
-    {
-      type: 'error',
-      id: 1,
-      stub: 345,
-      error: 'err'
-    },
+  // const message = {type: 'batch', rpcMessages: [
+  //   {
+  //     type: 'call',
+  //     id: 1,
+  //     stub: 345,
+  //     func: 'myFunc',
+  //     args: [
+  //       {
+  //         type: 'data-value',
+  //         data: 'some json'
+  //       },
+  //       {
+  //         type: 'api-value',
+  //         api: ['a', 'b'],
+  //         stub: 123
+  //       }
+  //     ],
+  //     returnPriority: 'immediate'
+  //   },
+  //   {
+  //     type: 'return',
+  //     id: 1,
+  //     stub: 345,
+  //     value: {
+  //       type: 'data-value',
+  //       data: '52'
+  //     }
+  //   },
+  //   {
+  //     type: 'error',
+  //     id: 1,
+  //     stub: 345,
+  //     error: 'err'
+  //   },
+  //
+  //
+  // ]}
+  // const buf = write(message)
+  // const m = read(buf)
 
-
-  ]}
-  write(buf, message)
-  const m = read(buf)
+  return protocolCodec
 })

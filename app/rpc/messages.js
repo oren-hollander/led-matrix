@@ -42,7 +42,7 @@ define(['priority'], ({MessagePriorities}) => {
       RpcDataValue: {
         struct: {
           type: 'RpcValueType',
-          data: 'string'
+          data: 'json'
         }
       },
 
