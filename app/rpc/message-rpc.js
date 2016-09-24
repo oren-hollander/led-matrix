@@ -135,7 +135,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
     }
 
     worker.onmessage = ({data}) => {
-      console.log('message ', data)
+      console.log('message', data)
       const message = Serializer.deserialize(data)
       switch (message.type) {
         case Messages.Types.Init:
@@ -159,8 +159,9 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
  todo
  ==============
  . properties
+ . properties and function messages protocol buffer definition
  . proto-buf for proxy functions instead of json
- . garbage collection for stubs
+ . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
-
+ . monitoring
 */
