@@ -3,9 +3,13 @@
 define([], () => {
 
   const ApiSymbol = Symbol('api')
+  const ApiProtocol = Symbol('protocol')
 
-  function defineApi(api) {
+  function defineApi(api, protocol) {
     api[ApiSymbol] = true
+
+    if(protocol)
+      api[ApiProtocol] = protocol
     return api
   }
 
