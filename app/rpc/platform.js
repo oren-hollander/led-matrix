@@ -1,6 +1,6 @@
 'use strict'
 
-require(['message-rpc', 'promise-util', 'api-util'], (MessageRPC, {ApiSymbol}, {defineApi}) => {
+require(['message-rpc', 'api-util'], (MessageRPC, {defineApi}) => {
 
   // const api = {
   //   add: (a, b) => a + b,
@@ -16,7 +16,7 @@ require(['message-rpc', 'promise-util', 'api-util'], (MessageRPC, {ApiSymbol}, {
   // }
 
   MessageRPC({}, new Worker('app.js')).then(appApi => {
-    appApi.initApp({x: 42}, defineApi({test: message => {console.log('at platform', message)}}))
+    appApi.initApp({x: 43}, defineApi(message => {console.log('at platform', message)}))
   })
 
 })

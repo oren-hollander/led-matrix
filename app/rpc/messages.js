@@ -8,7 +8,8 @@ define(['priority'], ({MessagePriorities}) => {
     Return: 'return',
     Error: 'error',
     DataValue: 'data-value',
-    ApiValue: 'api-value'
+    ApiValue: 'api-value',
+    FunctionValue: 'function-value'
   }
 
   const init = (api) => ({type: MessageTypes.Init, api})
@@ -16,6 +17,8 @@ define(['priority'], ({MessagePriorities}) => {
 
   const rpcDataValue = data => ({type: MessageTypes.DataValue, data})
   const rpcApiValue = (api, stub) => ({type: MessageTypes.ApiValue, api, stub})
+  const rpcFunctionValue = (stub) => ({type: MessageTypes.FunctionValue, stub})
+
   const rpcCall = (id, stub, func, args, returnPriority) => ({type: MessageTypes.Call, id, stub, func, args, returnPriority})
   const rpcReturn = (id, stub, value) => ({type: MessageTypes.Return, id, stub, value})
   const rpcError = (id, stub, error) => ({type: MessageTypes.Error, id, stub, error})
@@ -131,5 +134,5 @@ define(['priority'], ({MessagePriorities}) => {
   }
 
   return {Types: MessageTypes, init, batch, rpcCall, rpcReturn, rpcError,
-    rpcDataValue, rpcApiValue, isCall, isReturn, isError, messageProtocol}
+    rpcDataValue, rpcApiValue, rpcFunctionValue, isCall, isReturn, isError, messageProtocol}
 })

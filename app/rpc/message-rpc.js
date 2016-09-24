@@ -1,7 +1,7 @@
 'use strict'
 
 define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer'],
-  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi}, Stubs, {ApiSymbol},
+  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction}, Stubs, {ApiSymbol},
   Serializer) => {
 
   function MessageRPC(localApi, worker) {
@@ -9,6 +9,7 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const localApiStub = Stubs.add(promisifyApi(localApi))
+    const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler()
 
     sendMessage(Messages.init(Object.keys(localApi)))
 
@@ -25,14 +26,33 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
       sendMessage(Messages.batch(rpcMessages))
     }
 
-    // todo: shouldn't add twice the same api
+    // todo: consider how to treat the same proxy added multiple times
     function processOutgoingRpcValue(value) {
       if(value && value[ApiSymbol]){
-        const stub = Stubs.add(promisifyApi(value))
-        return Messages.rpcApiValue(Object.keys(value), stub)
+        if(typeof value === 'function'){
+          const stub = Stubs.add({func: promisifyFunction(value)})
+          return Messages.rpcFunctionValue(stub)
+        }
+        else {
+          const stub = Stubs.add(promisifyApi(value))
+          return Messages.rpcApiValue(Object.keys(value), stub)
+        }
       }
       else {
         return Messages.rpcDataValue(value)
+      }
+    }
+
+    function processIncomingRpcValue(value) {
+      switch(value.type) {
+        case Messages.Types.DataValue:
+          return value.data
+        case Messages.Types.FunctionValue:
+          return ApiProxy(['func'], value.stub, handleOutgoingCall)['func']
+        case Messages.Types.ApiValue:
+          return ApiProxy(value.api, value.stub, handleOutgoingCall)
+        default:
+          throw `Unknown type: ${value.type}`
       }
     }
 
@@ -73,18 +93,6 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
       }
       else {
         queue.add(rpcMessage, returnPriority)
-      }
-    }
-
-    function processIncomingRpcValue(value) {
-      switch(value.type) {
-        case Messages.Types.DataValue:
-          return value.data
-        case Messages.Types.ApiValue:
-          return ApiProxy(value.api, value.stub, handleOutgoingCall)
-          break
-        default:
-          throw `Unknown type: ${value.type}`
       }
     }
 
@@ -141,9 +149,18 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
       }
     }
 
-    const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler()
     return proxyPromise
   }
 
   return MessageRPC
 })
+
+/*
+ todo
+ ==============
+ . properties
+ . proto-buf for proxy functions instead of json
+ . garbage collection for stubs
+ . stress test and compare [proto | native | json] serializers
+
+*/

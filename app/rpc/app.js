@@ -19,9 +19,9 @@ require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority,
   }
 
   const appApi = {
-    initApp: (name, api) => {
+    initApp: (name, func) => {
       console.log('at app', name)
-      api.test(name)
+      func(name)
     }
   }
 
