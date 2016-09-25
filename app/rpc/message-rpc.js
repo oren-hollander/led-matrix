@@ -1,23 +1,31 @@
 'use strict'
 
-define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer'],
-  (Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction}, Stubs, {ApiSymbol},
+define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer'],
+  (_, Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction}, Stubs,
+    {apiSymbols: {ApiSymbol}},
+
+
   Serializer) => {
 
   function MessageRPC(localApi, worker) {
     let initialized = false
     let queue = Queue(sendBatch)
     const settlers = new Map()
-    const localApiStub = Stubs.add(promisifyApi(localApi))
+    const stubs = Stubs()
+    const proxies = Stubs()
+
+    const localApiStub = stubs.add(promisifyApi(localApi))
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler()
 
     sendMessage(Messages.init(Object.keys(localApi)))
+
+    const proxyHandlers = {makeCall: handleOutgoingCall, updateProperty: handleOutgoingProxyPropertyUpdate}
 
     function onInit(remoteApi) {
       if(!initialized){
         initialized = true
         sendMessage(Messages.init(Object.keys(localApi)))
-        const proxy = ApiProxy(remoteApi, localApiStub, handleOutgoingCall)
+        const proxy = ApiProxy(remoteApi, [], localApiStub, proxyHandlers)
         resolveProxy(proxy)
       }
     }
@@ -26,16 +34,44 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
       sendMessage(Messages.batch(rpcMessages))
     }
 
+    function addStub(api, propertyUpdater) {
+      const stub = stubs.add(api)
+
+      _.forOwn(api, (value, key) => {
+        if(_.isFunction(value)){
+          api[key] = promisifyFunction(value)
+        }
+        else {
+          let v = value
+          api[key] = {
+            get: () => v,
+            set: newValue => {
+              v = newValue
+              propertyUpdater(stub, key, newValue)
+            },
+            _set: newValue => {
+              v = newValue
+            }
+          }
+        }
+      })
+
+      return stub
+    }
+
     // todo: consider how to treat the same proxy added multiple times
     function processOutgoingRpcValue(value) {
       if(value && value[ApiSymbol]){
-        if(typeof value === 'function'){
-          const stub = Stubs.add({func: promisifyFunction(value)})
+        if(_.isFunction(value)){
+          const stub = stubs.add({func: promisifyFunction(value)})
           return Messages.rpcFunctionValue(stub)
         }
         else {
-          const stub = Stubs.add(promisifyApi(value))
-          return Messages.rpcApiValue(Object.keys(value), stub)
+          const properties = _.pickBy(value, _.negate(_.isFunction))
+          const stub = addStub(value, handleOutgoingStubPropertyUpdate)
+          const functionNames = _(value).pickBy(_.isFunction).keys().value()
+
+          return Messages.rpcApiValue(functionNames, properties, stub)
         }
       }
       else {
@@ -48,11 +84,22 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
         case Messages.Types.DataValue:
           return value.data
         case Messages.Types.FunctionValue:
-          return ApiProxy(['func'], value.stub, handleOutgoingCall)['func']
+          return ApiProxy(['func'], {}, value.stub, proxyHandlers)['func']
         case Messages.Types.ApiValue:
-          return ApiProxy(value.api, value.stub, handleOutgoingCall)
+          const proxy = ApiProxy(value.functionNames, value.properties, value.stub, proxyHandlers)
+          proxies.add(proxy, value.stub)
+          return proxy
         default:
           throw `Unknown type: ${value.type}`
+      }
+    }
+
+    function sendMessageByPriority(message, priority){
+      if(priority === MessagePriorities.Immediate){
+        sendMessage(Messages.batch([message]))
+      }
+      else {
+        queue.add(message, priority)
       }
     }
 
@@ -65,68 +112,70 @@ define(['queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'a
 
       const rpcMessage = Messages.rpcCall(id, stub, func, args.map(processOutgoingRpcValue), returnPriority)
 
-      if(callPriority === MessagePriorities.Immediate){
-        sendMessage(Messages.batch([rpcMessage]))
-      }
-      else {
-        queue.add(rpcMessage, callPriority)
-      }
+      sendMessageByPriority(rpcMessage, callPriority)
+    }
+
+    function handleOutgoingProxyPropertyUpdate(stub, prop, value) {
+      sendMessageByPriority(Messages.rpcProxyPropertyUpdate(stub, prop, value), MessagePriorities.Immediate)
+    }
+
+    function handleOutgoingStubPropertyUpdate(stub, prop, value) {
+      sendMessageByPriority(Messages.rpcStubPropertyUpdate(stub, prop, value), MessagePriorities.Immediate)
     }
 
     function handleOutgoingReturn(result, id, stub, returnPriority) {
-
       let rpcMessage = Messages.rpcReturn(id, stub, processOutgoingRpcValue(result))
-
-      if(returnPriority === MessagePriorities.Immediate){
-        sendMessage(Messages.batch([rpcMessage]))
-      }
-      else {
-        queue.add(rpcMessage, returnPriority)
-      }
+      sendMessageByPriority(rpcMessage, returnPriority)
     }
 
     function handleOutgoingError(error, id, stub, returnPriority) {
       const rpcMessage = Messages.rpcError(id, stub, error)
-
-      if(returnPriority === MessagePriorities.Immediate){
-        sendMessage(Messages.batch([rpcMessage]))
-      }
-      else {
-        queue.add(rpcMessage, returnPriority)
-      }
+      sendMessageByPriority(rpcMessage, returnPriority)
     }
 
-    function handleIncomingCall(callMessage) {
-      console.log('incoming call', callMessage.id, callMessage.stub, callMessage.func, callMessage.args, callMessage.returnPriority)
-      Stubs.get(callMessage.stub)[callMessage.func](... callMessage.args.map(processIncomingRpcValue))
+    function handleIncomingCall({id, stub, func, args, returnPriority}) {
+      console.log('incoming call', id, stub, func, args, returnPriority)
+      stubs.get(stub)[func](... args.map(processIncomingRpcValue))
         .then(result => {
-          handleOutgoingReturn(result, callMessage.id, callMessage.stub, callMessage.returnPriority)
+          handleOutgoingReturn(result, id, stub, returnPriority)
         })
         .catch(error => {
-          handleOutgoingError(error, callMessage.id, callMessage.stub, callMessage.returnPriority)
+          handleOutgoingError(error, id, stub, returnPriority)
         })
     }
 
-    function handleIncomingReturn(returnMessage) {
-      const settler = settlers.get(returnMessage.id)
-      settlers.delete(returnMessage.id)
-      settler.resolve(processIncomingRpcValue(returnMessage.value))
+    function handleIncomingReturn({id, value}) {
+      const settler = settlers.get(id)
+      settlers.delete(id)
+      settler.resolve(processIncomingRpcValue(value))
     }
 
-    function handleIncomingError(errorMessage) {
-      const settler = settlers.get(errorMessage.id)
-      settlers.delete(errorMessage.id)
-      settler.reject(errorMessage.error)
+    function handleIncomingError({id, error}) {
+      const settler = settlers.get(id)
+      settlers.delete(id)
+      settler.reject(error)
+    }
+
+    function handleIncomingProxyPropertyUpdate({stub, prop, value}){
+      stubs.get(stub)[prop]._set(value)
+    }
+
+    function handleIncomingStubPropertyUpdate({stub, prop, value}){
+      proxies.get(stub)[prop]._set(value)
     }
 
     function onBatch(rpcMessage) {
       const calls = rpcMessage.filter(Messages.isCall)
       const returns = rpcMessage.filter(Messages.isReturn)
       const errors = rpcMessage.filter(Messages.isError)
+      const proxyPropertyUpdates = rpcMessage.filter(Messages.isProxyPropertyUpdate)
+      const stubPropertyUpdates = rpcMessage.filter(Messages.isStubPropertyUpdate)
 
       errors.forEach(handleIncomingError)
       returns.forEach(handleIncomingReturn)
       calls.forEach(handleIncomingCall)
+      proxyPropertyUpdates.forEach(handleIncomingProxyPropertyUpdate)
+      stubPropertyUpdates.forEach(handleIncomingStubPropertyUpdate)
     }
 
     function sendMessage(message) {

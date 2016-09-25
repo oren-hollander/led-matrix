@@ -1,6 +1,6 @@
 'use strict'
 
-define([], () => {
+define(['lodash'], (_) => {
   const createPromiseWithSettler = () => {
     let resolve = undefined
     let reject = undefined
@@ -25,7 +25,14 @@ define([], () => {
   }
 
   function promisifyApi(api) {
-    return Object.keys(api).reduce((obj, func) => Object.assign(obj, {[func]: promisifyFunction(api[func])}), {})
+    return _.mapValues(api, value => {
+      if(_.isFunction(value)) {
+        return promisifyFunction(value)
+      }
+      else {
+        return value
+      }
+    })
   }
 
   return {createPromiseWithSettler, promisifyFunction, promisifyApi}

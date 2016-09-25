@@ -1,6 +1,12 @@
 'use strict'
 
-importScripts('../require.js')
+importScripts('/lib/require.js')
+
+require.config({
+  paths: {
+    'lodash': ['/lib/lodash']
+  }
+})
 
 require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority, MessagePriorities}) => {
 
@@ -19,9 +25,25 @@ require(['message-rpc', 'priority'], (MessageRPC, {CallPriority, ReturnPriority,
   }
 
   const appApi = {
-    initApp: (name, func) => {
-      console.log('at app', name)
-      func(name)
+    initApp: platformApi => {
+
+      // console.log('app, get', platformApi.myProperty.get())
+
+      setTimeout(() => {
+        platformApi.myProperty.set(30)
+      }, 7000)
+
+      setTimeout(() => {
+        console.log('app, get 1 sec', platformApi.myProperty.get())
+      }, 1000)
+
+      setTimeout(() => {
+        console.log('app, get 5 sec', platformApi.myProperty.get())
+      }, 5000)
+
+      setTimeout(() => {
+        console.log('app, get 9 sec', platformApi.myProperty.get())
+      }, 9000)
     }
   }
 

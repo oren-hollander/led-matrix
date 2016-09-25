@@ -1,16 +1,30 @@
 'use strict'
 
-define(['priority', 'promise-util', 'id-gen', 'api-util'],
-  ({CallPriority, ReturnPriority, MessagePriorities}, {createPromiseWithSettler}, IdGenerator, {ApiSymbol}) => {
+define(['lodash', 'priority', 'promise-util', 'id-gen'], (_, {CallPriority, ReturnPriority, MessagePriorities},
+  {createPromiseWithSettler}, IdGenerator) => {
 
   const idGen = IdGenerator()
 
-  function ApiProxy(remoteApi, stub, callHandler) {
+  function ApiProxy(functionNames, properties, stub, callHandler) {
+
     const api = {
       [CallPriority]: MessagePriorities.Immediate,
-      [ReturnPriority]: MessagePriorities.Immediate,
-      [ApiSymbol]: true
+      [ReturnPriority]: MessagePriorities.Immediate
     }
+
+    _.forOwn(properties, (propertyValue, propertyName) => {
+      let v = propertyValue
+      api[propertyName] = {
+        get: () => v,
+        set: (newValue) => {
+          v = newValue
+          callHandler.updateProperty(stub, propertyName, newValue)
+        },
+        _set: (newValue) => {
+          v = newValue
+        }
+      }
+    })
 
     function getPriority(func, prioritySymbol) {
       if(func[prioritySymbol])
@@ -18,11 +32,12 @@ define(['priority', 'promise-util', 'id-gen', 'api-util'],
       return api[prioritySymbol]
     }
 
-    return remoteApi.reduce((api, func) => {
+    return functionNames.reduce((api, func) => {
 
       const apiFunction = (...args) => {
         const {promise, resolve, reject} = createPromiseWithSettler()
-        callHandler(idGen.uniqueId(), stub, func, args, getPriority(apiFunction, CallPriority), getPriority(apiFunction, ReturnPriority), {resolve, reject})
+        callHandler.makeCall(idGen.uniqueId(), stub, func, args,
+          getPriority(apiFunction, CallPriority), getPriority(apiFunction, ReturnPriority), {resolve, reject})
         return promise
       }
 

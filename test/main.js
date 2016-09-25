@@ -5,9 +5,10 @@ require.config({
   baseUrl: '.',
   // paths: maps ids with paths (no extension)
   paths: {
-    'jasmine': ['jasmine/lib/jasmine-2.5.2/jasmine'],
-    'jasmine-html': ['jasmine/lib/jasmine-2.5.2/jasmine-html'],
-    'jasmine-boot': ['jasmine/lib/jasmine-2.5.2/boot']
+    'lodash': ['/lib/lodash'],
+    'jasmine': ['/lib/jasmine/lib/jasmine-2.5.2/jasmine'],
+    'jasmine-html': ['/lib/jasmine/lib/jasmine-2.5.2/jasmine-html'],
+    'jasmine-boot': ['/lib/jasmine/lib/jasmine-2.5.2/boot']
   },
   // shim: makes external libraries compatible with requirejs (AMD)
   shim: {
@@ -21,7 +22,7 @@ require.config({
 });
 
 require(['jasmine-boot'], function () {
-  require(['test.specs'], function(){
+  require(['defineApi.specs', 'remote-object.specs'], function(){
     //trigger Jasmine
     window.onload();
   })

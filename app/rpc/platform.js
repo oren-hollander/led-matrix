@@ -1,6 +1,12 @@
 'use strict'
 
-require(['message-rpc', 'api-util'], (MessageRPC, {defineApi}) => {
+require.config({
+  paths: {
+    'lodash': ['/lib/lodash']
+  }
+})
+
+require(['message-rpc', 'remote-object'], (MessageRPC, RemoteObject) => {
 
   // const api = {
   //   add: (a, b) => a + b,
@@ -15,8 +21,29 @@ require(['message-rpc', 'api-util'], (MessageRPC, {defineApi}) => {
   //   }
   // }
 
+  const platformApi = {
+    myProperty: 10
+  }
+
   MessageRPC({}, new Worker('app.js')).then(appApi => {
-    appApi.initApp({x: 43}, defineApi(message => {console.log('at platform', message)}))
+
+    appApi.initApp(RemoteObject(platformApi))
+
+    setTimeout(() => {
+      platformApi.myProperty.set(20)
+    }, 3000)
+
+    setTimeout(() => {
+      console.log('platform, get 1 sec', platformApi.myProperty.get())
+    }, 1000)
+
+    setTimeout(() => {
+      console.log('platform, get 5 sec', platformApi.myProperty.get())
+    }, 5000)
+
+    setTimeout(() => {
+      console.log('platform, get 9 sec', platformApi.myProperty.get())
+    }, 9000)
   })
 
 })

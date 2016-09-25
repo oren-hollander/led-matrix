@@ -1,19 +1,24 @@
 'use strict'
 
 define(['id-gen'], (IdGenerator) => {
-  const idGen = IdGenerator()
+  function Stubs() {
+    const idGen = IdGenerator()
 
-  const stubs = {}
+    const stubs = {}
 
-  function add(api) {
-    const id = idGen.uniqueId()
-    stubs[id] = api
-    return id
+    function add(api, id) {
+      if(id === undefined)
+        id = idGen.uniqueId()
+      stubs[id] = api
+      return id
+    }
+
+    function get(id) {
+      return stubs[id]
+    }
+
+    return {add, get}
   }
 
-  function get(id) {
-    return stubs[id]
-  }
-
-  return {add, get}
+  return Stubs
 })
