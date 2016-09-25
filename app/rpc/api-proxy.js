@@ -1,7 +1,7 @@
 'use strict'
 
-define(['lodash', 'priority', 'promise-util', 'id-gen'], (_, {CallPriority, ReturnPriority, MessagePriorities},
-  {createPromiseWithSettler}, IdGenerator) => {
+define(['lodash', 'priority', 'promise-util', 'id-gen', 'property'],
+  (_, {CallPriority, ReturnPriority, MessagePriorities}, {createPromiseWithSettler}, IdGenerator, createProperty) => {
 
   const idGen = IdGenerator()
 
@@ -13,17 +13,9 @@ define(['lodash', 'priority', 'promise-util', 'id-gen'], (_, {CallPriority, Retu
     }
 
     _.forOwn(properties, (propertyValue, propertyName) => {
-      let v = propertyValue
-      api[propertyName] = {
-        get: () => v,
-        set: (newValue) => {
-          v = newValue
-          callHandler.updateProperty(stub, propertyName, newValue)
-        },
-        _set: (newValue) => {
-          v = newValue
-        }
-      }
+      createProperty(api, propertyName, propertyValue, newValue => {
+        callHandler.updateProperty(stub, propertyName, newValue)
+      })
     })
 
     function getPriority(func, prioritySymbol) {

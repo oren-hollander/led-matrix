@@ -1,11 +1,8 @@
 'use strict'
 
-define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer'],
-  (_, Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction}, Stubs,
-    {apiSymbols: {ApiSymbol}},
-
-
-  Serializer) => {
+define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer', 'property'],
+  (_, Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction},
+  Stubs, {apiSymbols: {ApiSymbol}}, Serializer, createProperty) => {
 
   function MessageRPC(localApi, worker) {
     let initialized = false
@@ -42,17 +39,9 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
           api[key] = promisifyFunction(value)
         }
         else {
-          let v = value
-          api[key] = {
-            get: () => v,
-            set: newValue => {
-              v = newValue
-              propertyUpdater(stub, key, newValue)
-            },
-            _set: newValue => {
-              v = newValue
-            }
-          }
+          createProperty(api, key, value, newValue => {
+            propertyUpdater(stub, key, newValue)
+          })
         }
       })
 
@@ -207,9 +196,8 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
 /*
  todo
  ==============
- . properties
- . properties and function messages protocol buffer definition
- . proto-buf for proxy functions instead of json
+ . properties - priorities
+ . proto-buf for proxy functions & properties instead of json
  . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
  . monitoring
