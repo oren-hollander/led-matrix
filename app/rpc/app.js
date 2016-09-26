@@ -11,7 +11,7 @@ requirejs.config({
   }
 });
 
-require(['message-rpc', 'priority', 'monitor'], (MessageRPC, {CallPriority, ReturnPriority, MessagePriorities}, {ConsoleMonitor}) => {
+require(['message-rpc', 'priority', 'monitor'], (MessageRPC, {withPriority, setPriority, CallPriority, ReturnPriority, MessagePriorities}, {ConsoleMonitor}) => {
 
   function print(message) {
     console.log(message)
@@ -54,16 +54,15 @@ require(['message-rpc', 'priority', 'monitor'], (MessageRPC, {CallPriority, Retu
     // platform.test().then(innerApi => {
     //   innerApi.f(4).then(print)
     // })
-    platformApi.add[CallPriority] = MessagePriorities.Low
-    platformApi.add[ReturnPriority] = MessagePriorities.Low
-    platformApi.div[CallPriority] = MessagePriorities.Low
-    platformApi.div[ReturnPriority] = MessagePriorities.Low
+    setPriority(platformApi, MessagePriorities.High)
 
     // const add = withPriority(platform.add, MessagePriorities.Immediate)
     // platform[CallPriority] = MessagePriorities.Immediate
     // platform[ReturnPriority] = MessagePriorities.Immediate
     platformApi.add(1, 2).then(print).catch(error)
     platformApi.add(3, 4).then(print).catch(error)
+    platformApi.add(5, 6).then(print).catch(error)
+    platformApi.add(7, 8).then(print).catch(error)
 
     // const div = withPriority(platform.div, MessagePriorities.Immediate, MessagePriorities.None)
     // div(1, 2).then(print).catch(error)

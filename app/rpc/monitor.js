@@ -2,9 +2,6 @@
 
 define(['lodash', 'messages'], (_, Messages) => {
 
-  function formatMessage(message){
-    return message
-  }
 
   function ConsoleMonitor(name){
 
@@ -16,9 +13,26 @@ define(['lodash', 'messages'], (_, Messages) => {
 
     const now = () => duration(Date.now() - start)
 
-    const prefix = (messageType) => `${now()} ${name}: ${messageType}`
+    const prefix = messageType => `${now()} ${name}: ${messageType}`
 
-    const formatters = {
+    const batchLabel = (direction, rpcMessages) => {
+      return `${direction} Batch > ${rpcLabels(rpcMessages)}`
+    }
+
+    const rpcLabels = rpcMessages => {
+      const firstThree = _(rpcMessages)
+        .take(3)
+        .map(rpcLabel)
+        .join(', ')
+
+      return `[${rpcMessages.length > 3 ? `${firstThree}, ...` : firstThree}]`
+    }
+
+    const rpcLabel = rpcMessage => {
+      return `${rpcMessage.type} <${rpcMessage.stub}:${rpcMessage.id}>`
+    }
+
+    const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
         const initMessage = prefix(`${direction} Init`)
         if(message.api.length > 0)
@@ -27,12 +41,12 @@ define(['lodash', 'messages'], (_, Messages) => {
           console.log(initMessage)
       },
       [Messages.Types.Batch]: (message, direction) => {
-        console.group(prefix(`${direction} Batch`))
+        console.groupCollapsed(prefix(batchLabel(direction, message.rpcMessages)))
         _.forEach(message.rpcMessages, log)
         console.groupEnd()
       },
       [Messages.Types.Call]: message => {
-        console.groupCollapsed(`Call ${message.stub}:${message.id} ${message.func}`)
+        console.groupCollapsed(`${rpcLabel(message)} ${message.func}`)
         console.log(`ID: ${message.id}`)
         console.log(`Stub: ${message.stub}`)
         console.log(`Function: ${message.func}`)
@@ -48,7 +62,7 @@ define(['lodash', 'messages'], (_, Messages) => {
         console.groupEnd()
       },
       [Messages.Types.Return]: message => {
-        console.groupCollapsed(`Return ${message.stub}:${message.id}`)
+        console.groupCollapsed(rpcLabel(message))
         console.log(`ID: ${message.id}`)
         console.log(`Stub: ${message.stub}`)
         log(message.value)
@@ -57,7 +71,7 @@ define(['lodash', 'messages'], (_, Messages) => {
         console.groupEnd()
       },
       [Messages.Types.Error]: message => {
-        console.groupCollapsed(`Error ${message.stub}:${message.id}`)
+        console.groupCollapsed(rpcLabel(message))
         console.log(`ID: ${message.id}`)
         console.log(`Stub: ${message.stub}`)
         console.log(`Error: ${message.error}`)
@@ -66,14 +80,14 @@ define(['lodash', 'messages'], (_, Messages) => {
         console.groupEnd()
       },
       [Messages.Types.ProxyPropertyUpdate]: message => {
-        console.groupCollapsed(`Proxy Property Update ${message.stub}`)
+        console.groupCollapsed(rpcLabel(message))
         console.log(`Stub: ${message.stub}`)
         console.log(`Property: ${message.prop}`)
         console.log(`Value: ${message.value}`)
         console.groupEnd()
       },
       [Messages.Types.StubPropertyUpdate]: message => {
-        console.groupCollapsed(`Stub Property Update ${message.stub}`)
+        console.groupCollapsed(rpcLabel(message))
         console.log(`Stub: ${message.stub}`)
         console.log(`Property: ${message.prop}`)
         console.log(`Value: ${message.value}`)
@@ -113,17 +127,19 @@ define(['lodash', 'messages'], (_, Messages) => {
     }
 
     function log(message, direction) {
-      formatters[message.type](message, direction)
+      messageLoggers[message.type](message, direction)
     }
 
     function queueMessage(rpcMessage) {
-      console.log(prefix(`Queue ${rpcMessage.type} : ${rpcMessage.stub}`))
+      console.groupCollapsed(prefix(`Add To Queue > ${rpcLabel(rpcMessage)}`))
+      log(rpcMessage)
+      console.groupEnd()
     }
 
     function drainMessageQueue(rpcMessages) {
-      console.groupCollapsed('Drain Queue')
+      console.groupCollapsed(`Drain Queue > ${rpcLabels(rpcMessages)}`)
       rpcMessages.forEach(rpcMessage => {
-        console.log(prefix(`${rpcMessage.type} : ${rpcMessage.stub}`))
+        log(rpcMessage)
       })
       console.groupEnd()
     }
