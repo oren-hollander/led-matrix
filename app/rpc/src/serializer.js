@@ -1,6 +1,6 @@
 'use strict'
 
-define(['messages', '../buffer/proto-buf'], (Messages, protocolCodec) => {
+define(['messages', '../../buffer/proto-buf'], (Messages, protocolCodec) => {
 
   const jsonSerializer = {
     serialize: value => ({message: JSON.stringify(value), transferList: []}),

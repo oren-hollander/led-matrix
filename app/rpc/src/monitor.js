@@ -16,7 +16,7 @@ define(['lodash', 'messages'], (_, Messages) => {
     const prefix = messageType => `${now()} ${name}: ${messageType}`
 
     const batchLabel = (direction, rpcMessages) => {
-      return `${direction} Batch > ${rpcLabels(rpcMessages)}`
+      return `${direction} Batch ~ ${rpcLabels(rpcMessages)}`
     }
 
     const rpcLabels = rpcMessages => {
@@ -36,7 +36,7 @@ define(['lodash', 'messages'], (_, Messages) => {
       [Messages.Types.Init]: (message, direction) => {
         const initMessage = prefix(`${direction} Init`)
         if(message.api.length > 0)
-          console.log(`${initMessage} > [${message.api.join()}]`)
+          console.log(`${initMessage} ~ [${message.api.join()}]`)
         else
           console.log(initMessage)
       },
@@ -131,13 +131,13 @@ define(['lodash', 'messages'], (_, Messages) => {
     }
 
     function queueMessage(rpcMessage) {
-      console.groupCollapsed(prefix(`Add To Queue > ${rpcLabel(rpcMessage)}`))
+      console.groupCollapsed(prefix(`Add To Queue ~ ${rpcLabel(rpcMessage)}`))
       log(rpcMessage)
       console.groupEnd()
     }
 
     function drainMessageQueue(rpcMessages) {
-      console.groupCollapsed(`Drain Queue > ${rpcLabels(rpcMessages)}`)
+      console.groupCollapsed(`Drain Queue ~ ${rpcLabels(rpcMessages)}`)
       rpcMessages.forEach(rpcMessage => {
         log(rpcMessage)
       })

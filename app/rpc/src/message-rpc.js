@@ -204,7 +204,7 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
 /*
  todo
  ==============
- . try to implement properties using functions
+ . try to implement properties using functions and use proxy wrappers
  . proto-buf for proxy functions & properties instead of json
  . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers

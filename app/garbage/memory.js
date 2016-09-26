@@ -1,6 +1,6 @@
 'use strict'
 
-define(['id-gen', './config'], (IdGenerator, {garbageCollectionTimeout, garbageCollectionPeriod}) => {
+define(['../rpc/src/id-gen', './config'], (IdGenerator, {garbageCollectionTimeout, garbageCollectionPeriod}) => {
 
   const objects = {}
 
