@@ -8,8 +8,8 @@ define(['lodash', 'priority', 'promise-util', 'id-gen', 'property'],
   function ApiProxy(functionNames, properties, stub, callHandler) {
 
     const api = {
-      [CallPriority]: MessagePriorities.Immediate,
-      [ReturnPriority]: MessagePriorities.Immediate
+      [CallPriority]: MessagePriorities.High,
+      [ReturnPriority]: MessagePriorities.High
     }
 
     _.forOwn(properties, (propertyValue, propertyName) => {

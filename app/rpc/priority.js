@@ -12,24 +12,38 @@ define([], () => {
     None: 'none'
   }
 
-  const setPriority = (func, callPriority, returnPriority = callPriority) => {
-    func[CallPriority] = callPriority
-    func[ReturnPriority] = returnPriority
+  const setPriority = (functionOrApi, callPriority, returnPriority = callPriority) => {
+    functionOrApi[CallPriority] = callPriority
+    functionOrApi[ReturnPriority] = returnPriority
   }
 
-  const withPriority = (func, callPriority, returnPriority = callPriority) => (... args) => {
-    const currentCallPriority = func[CallPriority]
-    const currentReturnPriority = func[ReturnPriority]
+  function withPriority(functionOrApi) {
+    const ctx = {
+      callPriority: functionOrApi[CallPriority],
+      returnPriority: functionOrApi[ReturnPriority]
+    }
 
-    func[CallPriority] = callPriority
-    func[ReturnPriority] = returnPriority
+    const withPriorityBuilder = {
+      Call: priority => {
+        ctx.callPriority = priority
+        return withPriorityBuilder
+      },
+      Return: priority => {
+        ctx.returnPriority = priority
+        return withPriorityBuilder
+      },
+      Do: f => {
+        const currentCallPriority = functionOrApi[CallPriority]
+        const currentReturnPriority = functionOrApi[ReturnPriority]
+        functionOrApi[CallPriority] = ctx.callPriority
+        functionOrApi[ReturnPriority] = ctx.returnPriority
+        f(functionOrApi)
+        functionOrApi[CallPriority] = currentCallPriority
+        functionOrApi[ReturnPriority] = currentReturnPriority
+      }
+    }
 
-    const result = func(...args)
-
-    func[CallPriority] = currentCallPriority
-    func[ReturnPriority] = currentReturnPriority
-
-    return result
+    return withPriorityBuilder
   }
 
   return {

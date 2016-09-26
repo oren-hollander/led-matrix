@@ -1,6 +1,6 @@
 'use strict'
 
-define(['lodash', 'api-util'], (_, {apiSymbols: {ApiSymbol, ApiProtocol, ApiFunction, ApiProperty}}) => {
+define(['api-util'], ({ApiSymbol}) => {
 
   function RemoteObject(object) {
     object[ApiSymbol] = true

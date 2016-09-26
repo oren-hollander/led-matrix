@@ -1,6 +1,6 @@
 'use strict'
 
-define(['priority'], ({MessagePriorities}) => {
+define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
   const MessageTypes = {
     Init: 'init',
     Batch: 'batch',
@@ -16,18 +16,31 @@ define(['priority'], ({MessagePriorities}) => {
     FunctionValue: 'function-value'
   }
 
+  const rpcMessage = (type, args) => {
+    if(debug)
+      return Object.assign({type}, {ts: Date.now()}, args)
+    else
+      return Object.assign({type}, args)
+  }
+
   const init = (api) => ({type: MessageTypes.Init, api})
   const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
 
   const rpcDataValue = data => ({type: MessageTypes.DataValue, data})
   const rpcApiValue = (functionNames, properties, stub) => ({type: MessageTypes.ApiValue, functionNames, properties, stub})
-  const rpcFunctionValue = (stub) => ({type: MessageTypes.FunctionValue, stub})
+  const rpcFunctionValue = stub => ({type: MessageTypes.FunctionValue, stub})
 
-  const rpcCall = (id, stub, func, args, returnPriority) => ({type: MessageTypes.Call, id, stub, func, args, returnPriority})
-  const rpcReturn = (id, stub, value) => ({type: MessageTypes.Return, id, stub, value})
-  const rpcError = (id, stub, error) => ({type: MessageTypes.Error, id, stub, error})
-  const rpcStubPropertyUpdate = (stub, prop, value) => ({type: MessageTypes.StubPropertyUpdate, stub, prop, value})
-  const rpcProxyPropertyUpdate = (stub, prop, value) => ({type: MessageTypes.ProxyPropertyUpdate, stub, prop, value})
+  const rpcCall = (id, stub, func, args, returnPriority) => rpcMessage(MessageTypes.Call, {id, stub, func, args, returnPriority})
+  const rpcReturn = (id, stub, value, callTimestamp) => debug
+    ? rpcMessage(MessageTypes.Return, {id, stub, value, callTimestamp})
+    : rpcMessage(MessageTypes.Return, {id, stub, value})
+
+  const rpcError = (id, stub, error, callTimestamp) => debug
+    ? rpcMessage(MessageTypes.Error, {id, stub, error, callTimestamp})
+    : rpcMessage(MessageTypes.Error, {id, stub, error})
+
+  const rpcStubPropertyUpdate = (stub, prop, value) => rpcMessage(MessageTypes.StubPropertyUpdate, {stub, prop, value})
+  const rpcProxyPropertyUpdate = (stub, prop, value) => rpcMessage(MessageTypes.ProxyPropertyUpdate, {stub, prop, value})
 
   const isCall = rpcMessage => rpcMessage.type === MessageTypes.Call
   const isReturn = rpcMessage => rpcMessage.type === MessageTypes.Return

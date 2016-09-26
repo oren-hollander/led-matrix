@@ -1,10 +1,11 @@
 'use strict'
 
-define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer', 'property'],
+define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer',
+    'property'],
   (_, Queue, Messages, {MessagePriorities}, ApiProxy, {createPromiseWithSettler, promisifyApi, promisifyFunction},
-  Stubs, {apiSymbols: {ApiSymbol}}, Serializer, createProperty) => {
+  Stubs, {ApiSymbol}, Serializer, createProperty) => {
 
-  function MessageRPC(localApi, worker) {
+  function MessageRPC(localApi, worker, monitor) {
     let initialized = false
     let queue = Queue(sendBatch)
     const settlers = new Map()
@@ -13,7 +14,6 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
 
     const localApiStub = stubs.add(promisifyApi(localApi))
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler()
-
     sendMessage(Messages.init(Object.keys(localApi)))
 
     const proxyHandlers = {makeCall: handleOutgoingCall, updateProperty: handleOutgoingProxyPropertyUpdate}
@@ -28,6 +28,9 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
     }
 
     function sendBatch(rpcMessages) {
+      if(monitor)
+        monitor.drainMessageQueue(rpcMessages)
+
       sendMessage(Messages.batch(rpcMessages))
     }
 
@@ -88,12 +91,13 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
         sendMessage(Messages.batch([message]))
       }
       else {
+        if(monitor)
+          monitor.queueMessage(message)
         queue.add(message, priority)
       }
     }
 
     function handleOutgoingCall(id, stub, func, args, callPriority, returnPriority, settler) {
-      console.log('outgoing call', id, func, args, callPriority, returnPriority)
       if(returnPriority === MessagePriorities.None)
         settler.resolve()
       else
@@ -112,24 +116,23 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
       sendMessageByPriority(Messages.rpcStubPropertyUpdate(stub, prop, value), MessagePriorities.Immediate)
     }
 
-    function handleOutgoingReturn(result, id, stub, returnPriority) {
-      let rpcMessage = Messages.rpcReturn(id, stub, processOutgoingRpcValue(result))
+    function handleOutgoingReturn(result, id, stub, returnPriority, callTimestamp) {
+      let rpcMessage = Messages.rpcReturn(id, stub, processOutgoingRpcValue(result), callTimestamp)
       sendMessageByPriority(rpcMessage, returnPriority)
     }
 
-    function handleOutgoingError(error, id, stub, returnPriority) {
-      const rpcMessage = Messages.rpcError(id, stub, error)
+    function handleOutgoingError(error, id, stub, returnPriority, callTimestamp) {
+      const rpcMessage = Messages.rpcError(id, stub, error, callTimestamp)
       sendMessageByPriority(rpcMessage, returnPriority)
     }
 
-    function handleIncomingCall({id, stub, func, args, returnPriority}) {
-      console.log('incoming call', id, stub, func, args, returnPriority)
+    function handleIncomingCall({id, stub, func, args, returnPriority, ts}) {
       stubs.get(stub)[func](... args.map(processIncomingRpcValue))
         .then(result => {
-          handleOutgoingReturn(result, id, stub, returnPriority)
+          handleOutgoingReturn(result, id, stub, returnPriority, ts)
         })
         .catch(error => {
-          handleOutgoingError(error, id, stub, returnPriority)
+          handleOutgoingError(error, id, stub, returnPriority, ts)
         })
     }
 
@@ -168,13 +171,18 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
     }
 
     function sendMessage(message) {
+      if(monitor)
+        monitor.outgoingMessage(message)
+
       const {message: messageData, transferList} = Serializer.serialize(message)
       worker.postMessage(messageData, transferList)
     }
 
     worker.onmessage = ({data}) => {
-      console.log('message', data)
       const message = Serializer.deserialize(data)
+      if(monitor)
+        monitor.incomingMessage(message)
+
       switch (message.type) {
         case Messages.Types.Init:
           onInit(message.api)
@@ -196,9 +204,11 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
 /*
  todo
  ==============
- . properties - priorities
+ . try to implement properties using functions
  . proto-buf for proxy functions & properties instead of json
  . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
  . monitoring
-*/
+ . properties - priorities
+
+ */

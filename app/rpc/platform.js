@@ -1,49 +1,54 @@
 'use strict'
 
-require.config({
+requirejs.config({
   paths: {
-    'lodash': ['/lib/lodash']
+    lodash: ['/lib/lodash']
+  },
+  config: {
+    monitor: {
+      debug: true
+    }
   }
-})
+});
 
-require(['message-rpc', 'remote-object'], (MessageRPC, RemoteObject) => {
+require(['message-rpc', 'remote-object', 'monitor'], (MessageRPC, RemoteObject, {ConsoleMonitor}) => {
 
-  // const api = {
-  //   add: (a, b) => a + b,
-  //   div: (a, b) => {
-  //     if (b === 0)
-  //       throw 'division by zero error'
-  //
-  //     return a / b
-  //   },
+  const platformApi = {
+    add: (a, b) => a + b,
+    div: (a, b) => {
+      if (b === 0)
+        throw 'division by zero error'
+
+      return a / b
+    },
   //   test: () => {
   //     return defineApi({f: a => a * a})
   //   }
-  // }
-
-  const platformApi = {
-    myProperty: 10
   }
 
-  MessageRPC({}, new Worker('app.js')).then(appApi => {
+  // const platformApi = {
+  //   myProperty: 10
+  // }
 
-    appApi.initApp(RemoteObject(platformApi))
+  MessageRPC(platformApi, new Worker('app.js')/*, ConsoleMonitor('Platform')*/)//.then(appApi => {
 
-    setTimeout(() => {
-      platformApi.myProperty.set(20)
-    }, 3000)
-
-    setTimeout(() => {
-      console.log('platform, get 1 sec', platformApi.myProperty.get())
-    }, 1000)
-
-    setTimeout(() => {
-      console.log('platform, get 5 sec', platformApi.myProperty.get())
-    }, 5000)
-
-    setTimeout(() => {
-      console.log('platform, get 9 sec', platformApi.myProperty.get())
-    }, 9000)
-  })
+    // appApi.initApp(RemoteObject(platformApi))
+    //
+    // setTimeout(() => {
+    //   platformApi.myProperty.set(20)
+    // }, 3000)
+    //
+    // setTimeout(() => {
+    //   // console.log('platform, get 1 sec', platformApi.myProperty.get())
+    // }, 1000)
+    //
+    // setTimeout(() => {
+    //   // console.log('platform, get 5 sec', platformApi.myProperty.get())
+    // }, 5000)
+    //
+    // setTimeout(() => {
+    //   // console.log('platform, get 9 sec', platformApi.myProperty.get())
+    // }, 9000)
+  // })
 
 })

@@ -2,7 +2,7 @@
 
 require.config({
   // to set the default folder
-  baseUrl: '.',
+  baseUrl: '/app/rpc',
   // paths: maps ids with paths (no extension)
   paths: {
     'lodash': ['/lib/lodash'],
@@ -22,7 +22,7 @@ require.config({
 });
 
 require(['jasmine-boot'], function () {
-  require(['defineApi.specs', 'remote-object.specs'], function(){
+  require(['../../test/priority.specs', '../../test/remote-object.specs'], function(){
     //trigger Jasmine
     window.onload();
   })
