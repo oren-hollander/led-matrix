@@ -59,26 +59,49 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
         enum: [MessageTypes.Init, MessageTypes.Batch],
       },
       RpcMessageType: {
-        enum: [MessageTypes.Call, MessageTypes.Return, MessageTypes.Error]
+        enum: [MessageTypes.ApiCall, MessageTypes.FunctionCall, MessageTypes.Return, MessageTypes.Error,
+          MessageTypes.StubPropertyUpdate, MessageTypes.ProxyPropertyUpdate]
       },
       RpcValueType: {
-        enum: [MessageTypes.DataValue, MessageTypes.ApiValue]
+        enum: [MessageTypes.Value, MessageTypes.Api, MessageTypes.Function, MessageTypes.SharedObject]
       },
       Priority: {
         enum: [MessagePriorities.Immediate, MessagePriorities.High, MessagePriorities.Medium, MessagePriorities.Low, MessagePriorities.None]
       },
 
-      RpcDataValue: {
+      RpcValueValue: {
         struct: {
           type: 'RpcValueType',
-          data: 'json'
+          value: 'json'
         }
       },
 
       RpcApiValue: {
         struct: {
           type: 'RpcValueType',
-          api: {array: 'string'},
+          functionNames: {array: 'string'},
+          stub: 'uint32'
+        }
+      },
+
+      RpcFunctionValue: {
+        struct: {
+          type: 'RpcValueType',
+          stub: 'uint32'
+        }
+      },
+
+      RpcSharedObjectProperty: {
+        struct: {
+          name: 'string',
+          value: 'json'
+        }
+      },
+
+      RpcSharedObjectValue: {
+        struct: {
+          type: 'RpcValueType',
+          properties: 'json', //{array: 'RpcSharedObjectProperty'},
           stub: 'uint32'
         }
       },
@@ -87,18 +110,30 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
         union: {
           tag: 'type',
           cases: {
-            [MessageTypes.DataValue]: 'RpcDataValue',
-            [MessageTypes.ApiValue]: 'RpcApiValue'
+            [MessageTypes.Value]: 'RpcValueValue',
+            [MessageTypes.Api]: 'RpcApiValue',
+            [MessageTypes.Function]: 'RpcFunctionValue',
+            [MessageTypes.SharedObject]: 'RpcSharedObjectValue'
           }
         }
       },
 
-      RpcCall: {
+      RpcApiCall: {
         struct: {
           type: 'RpcMessageType',
           id: 'uint32',
-          stub: 'uint16',
+          stub: 'uint32',
           func: 'string',
+          args: {array: 'RpcValue'},
+          returnPriority: 'Priority'
+        }
+      },
+
+      RpcFunctionCall: {
+        struct: {
+          type: 'RpcMessageType',
+          id: 'uint32',
+          stub: 'uint32',
           args: {array: 'RpcValue'},
           returnPriority: 'Priority'
         }
@@ -108,7 +143,7 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
         struct: {
           type: 'RpcMessageType',
           id: 'uint32',
-          stub: 'uint16',
+          stub: 'uint32',
           value: 'RpcValue'
         }
       },
@@ -117,8 +152,26 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
         struct: {
           type: 'RpcMessageType',
           id: 'uint32',
-          stub: 'uint16',
+          stub: 'uint32',
           error: 'string'
+        }
+      },
+
+      RpcStubPropertyUpdate: {
+        struct: {
+          type: 'RpcMessageType',
+          stub: 'uint32',
+          prop: 'string',
+          value: 'json'
+        }
+      },
+
+      RpcProxyPropertyUpdate: {
+        struct: {
+          type: 'RpcMessageType',
+          stub: 'uint32',
+          prop: 'string',
+          value: 'json'
         }
       },
 
@@ -126,9 +179,12 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
         union: {
           tag: 'type',
           cases: {
-            [MessageTypes.Call]: 'RpcCall',
+            [MessageTypes.ApiCall]: 'RpcApiCall',
+            [MessageTypes.FunctionCall]: 'RpcFunctionCall',
             [MessageTypes.Return]: 'RpcReturn',
-            [MessageTypes.Error]: 'RpcError'
+            [MessageTypes.Error]: 'RpcError',
+            [MessageTypes.StubPropertyUpdate]: 'RpcStubPropertyUpdate',
+            [MessageTypes.ProxyPropertyUpdate]: 'RpcProxyPropertyUpdate'
           }
         }
       },

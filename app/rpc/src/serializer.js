@@ -25,5 +25,5 @@ define(['messages', '../../buffer/proto-buf'], (Messages, protocolCodec) => {
     }
   }
 
-  return jsonSerializer //  protoBufSerializer
+  return protoBufSerializer //jsonSerializer
 })

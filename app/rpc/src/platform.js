@@ -76,7 +76,7 @@ require(['message-rpc', 'remote-object', 'monitor', 'shared-object-proxy'], (Mes
     }
   }
 
-  MessageRPC(RemoteApi(platformApi), new Worker('src/app.js')/*, ConsoleMonitor('Platform')*/).then(({api: appApi, createSharedObject}) => {
+  MessageRPC(RemoteApi(platformApi), new Worker('src/app.js'), ConsoleMonitor('Platform')).then(({api: appApi, createSharedObject}) => {
     const so_ = createSharedObject({x: 10})
     const so = SharedObjectProxy(so_)
     console.log('platform get x 0:1', so.x, 10)

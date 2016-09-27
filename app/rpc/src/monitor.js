@@ -29,7 +29,10 @@ define(['lodash', 'messages'], (_, Messages) => {
     }
 
     const rpcLabel = rpcMessage => {
-      return `${rpcMessage.type} <${rpcMessage.stub}:${rpcMessage.id}>`
+      if(rpcMessage.id !== undefined)
+        return `${rpcMessage.type} <${rpcMessage.stub}:${rpcMessage.id}>`
+      else
+        return `${rpcMessage.type} <${rpcMessage.stub}>`
     }
 
     const messageLoggers = {
@@ -45,11 +48,26 @@ define(['lodash', 'messages'], (_, Messages) => {
         _.forEach(message.rpcMessages, log)
         console.groupEnd()
       },
-      [Messages.Types.Call]: message => {
+      [Messages.Types.ApiCall]: message => {
         console.groupCollapsed(`${rpcLabel(message)} ${message.func}`)
         console.log(`ID: ${message.id}`)
         console.log(`Stub: ${message.stub}`)
         console.log(`Function: ${message.func}`)
+        if(message.args.length > 0){
+          console.groupCollapsed(`Arguments`)
+          _.forEach(message.args, log)
+          console.groupEnd()
+        }
+        else{
+          console.log(`No arguments`)
+        }
+        console.log(`Return priority: ${message.returnPriority}`)
+        console.groupEnd()
+      },
+      [Messages.Types.FunctionCall]: message => {
+        console.groupCollapsed(`${rpcLabel(message)}`)
+        console.log(`ID: ${message.id}`)
+        console.log(`Stub: ${message.stub}`)
         if(message.args.length > 0){
           console.groupCollapsed(`Arguments`)
           _.forEach(message.args, log)
@@ -93,13 +111,13 @@ define(['lodash', 'messages'], (_, Messages) => {
         console.log(`Value: ${message.value}`)
         console.groupEnd()
       },
-      [Messages.Types.DataValue]: message => {
+      [Messages.Types.Value]: message => {
         if(message.data === undefined)
           console.log('No value')
         else
           console.log(`Value: ${message.data}`)
       },
-      [Messages.Types.ApiValue]: message => {
+      [Messages.Types.Api]: message => {
         console.groupCollapsed(`Api: ${message.stub}`)
         console.log(`Stub: ${message.stub}`)
 
@@ -119,9 +137,15 @@ define(['lodash', 'messages'], (_, Messages) => {
 
         console.groupEnd()
       },
-      [Messages.Types.FunctionValue]: message => {
+      [Messages.Types.Function]: message => {
         console.groupCollapsed(`Function: ${message.stub}`)
         console.log(`Stub: ${message.stub}`)
+        console.groupEnd()
+      },
+      [Messages.Types.SharedObject]: message => {
+        console.groupCollapsed(`Shared Object: ${message.stub}`)
+        console.log(`Stub: ${message.stub}`)
+        console.log(`Properties: ${JSON.stringify(message.properties)}`)
         console.groupEnd()
       }
     }

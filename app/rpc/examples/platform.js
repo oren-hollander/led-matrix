@@ -7,8 +7,8 @@ requirejs.config({
   }
 });
 
-require(['message-rpc', 'remote-object', 'monitor', 'shared-object-proxy'], (MessageRPC,
-  {RemoteApi, RemoteFunction}, SharedObjectProxy) => {
+require(['message-rpc', 'remote-object', 'shared-object-proxy', 'monitor'], (MessageRPC,
+  {RemoteApi, RemoteFunction}, SharedObjectProxy, {ConsoleMonitor}) => {
 
   const platformApi = {
     f: () => {
@@ -17,7 +17,7 @@ require(['message-rpc', 'remote-object', 'monitor', 'shared-object-proxy'], (Mes
     }
   }
 
-  MessageRPC(RemoteApi(platformApi), new Worker('app.js')).then(({api: appApi, createSharedObject}) => {
+  MessageRPC(RemoteApi(platformApi), new Worker('app.js'), ConsoleMonitor('Platform')).then(({api: appApi, createSharedObject}) => {
     const so_ = createSharedObject({x: 10})
     const so = SharedObjectProxy(so_)
     console.log('platform get x 0:1', so.x, 10)
