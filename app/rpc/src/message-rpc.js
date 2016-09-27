@@ -146,13 +146,15 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
     }
 
     function handleIncomingApiCall({id, stub, func, args, returnPriority, ts}) {
-      stubs.get(stub)[func](... args.map(processIncomingRpcValue))
-        .then(result => {
+      const promise = stubs.get(stub)[func](... args.map(processIncomingRpcValue))
+      if(returnPriority !== MessagePriorities.None) {
+        promise.then(result => {
           handleOutgoingReturn(result, id, stub, returnPriority, ts)
         })
         .catch(error => {
           handleOutgoingError(error, id, stub, returnPriority, ts)
         })
+      }
     }
 
     function handleIncomingFunctionCall({id, stub, args, returnPriority, ts}) {

@@ -16,6 +16,7 @@ define([], () => {
   const setPriority = (functionOrApi, callPriority, returnPriority = callPriority) => {
     functionOrApi[CallPriority] = callPriority
     functionOrApi[ReturnPriority] = returnPriority
+    return functionOrApi
   }
 
   function withPriority(functionOrApi) {
