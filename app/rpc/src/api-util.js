@@ -3,9 +3,9 @@
 define([], () => {
 
   const ApiSymbol = Symbol('api')
-  const ApiProtocol = Symbol('protocol')
-  const ApiFunction = Symbol('function')
-  const ApiProperty = Symbol('property')
+  const PropertySymbol = Symbol('property')
+  const SharedObjectSymbol = Symbol('shared-object')
+  const FunctionSymbol = Symbol('function')
 
-  return {ApiSymbol, ApiProtocol, ApiFunction, ApiProperty}
+  return {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}
 })

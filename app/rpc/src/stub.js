@@ -17,7 +17,11 @@ define(['id-gen'], (IdGenerator) => {
       return stubs[id]
     }
 
-    return {add, get}
+    function createId(){
+      return idGen.uniqueId()
+    }
+
+    return {add, get, createId}
   }
 
   return Stubs

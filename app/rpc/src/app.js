@@ -12,8 +12,9 @@ requirejs.config({
   }
 });
 
-require(['message-rpc', 'priority', 'monitor', 'remote-object'],
-  (MessageRPC, {withPriority, setPriority, CallPriority, ReturnPriority, MessagePriorities}, {ConsoleMonitor}, RemoteObject) => {
+require(['message-rpc', 'priority', 'monitor', 'remote-object', 'shared-object-proxy'],
+  (MessageRPC, {withPriority, setPriority, CallPriority, ReturnPriority, MessagePriorities}, {ConsoleMonitor},
+    {RemoteFunction, RemoteApi}, SharedObjectProxy) => {
 
     function print(message) {
       console.log(message)
@@ -52,35 +53,54 @@ require(['message-rpc', 'priority', 'monitor', 'remote-object'],
     //   }
     // }
 
-    function ImageWidgetProxy(remoteImage) {
+    // function ImageWidgetProxy(remoteImage) {
+    //
+    //   let src
+    //
+    //   const listener = newSrc => {
+    //     src = newSrc
+    //   }
+    //
+    //   remoteImage.setSrcListener(RemoteObject(listener))
+    //
+    //   return {
+    //     getSrc: () => src,
+    //     setSrc: newSrc => {
+    //       src = newSrc
+    //       remoteImage.setSrc(src)
+    //     }
+    //   }
+    // }
 
-      let src
-
-      const listener = newSrc => {
-        src = newSrc
-      }
-
-      remoteImage.setSrcListener(RemoteObject(listener))
-
-      return {
-        getSrc: () => src,
-        setSrc: newSrc => {
-          src = newSrc
-          remoteImage.setSrc(src)
-        }
+    let sharedObject
+    const appApi = {
+      setSharedObject: (so) => {
+        sharedObject = SharedObjectProxy(so)
+        console.log('app get x 0', sharedObject.x, 20)
       }
     }
 
-    MessageRPC({}, self, ConsoleMonitor('App'))
-      .then(platformApi => platformApi.getImage())
-      .then(remoteImage => {
-        const image = ImageWidgetProxy(remoteImage)
-        image.setSrc('post')
-      })
+    MessageRPC(RemoteApi(appApi), self/*, ConsoleMonitor('App')*/).then(({api: platformApi}) => {
+      platformApi.f().then(add => add(3, 4)).then(print)
+
+      setTimeout(() => {
+        console.log('app get x 2', sharedObject.x, 20)
+      }, 4000)
+
+      setTimeout(() => {
+        console.log('app get x 4', sharedObject.x, 30)
+      }, 8000)
+
+      setTimeout(() => {
+        sharedObject.x = 40
+        console.log('app get x 5', sharedObject.x, 40)
+      }, 10000)
+
+      setTimeout(() => {
+        console.log('app get x 6', sharedObject.x, 40)
+      }, 12000)
+    })
   })
-
-
-
 
 // platformApi.getImage()
     //   .then(img => img.getSrc()

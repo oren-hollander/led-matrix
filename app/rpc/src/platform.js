@@ -7,7 +7,8 @@ requirejs.config({
   }
 });
 
-require(['message-rpc', 'remote-object', 'monitor'], (MessageRPC, RemoteObject, {ConsoleMonitor}) => {
+require(['message-rpc', 'remote-object', 'monitor', 'shared-object-proxy'], (MessageRPC,
+  {RemoteApi, RemoteFunction}, {ConsoleMonitor}, SharedObjectProxy) => {
 
   // const platformApi = {
   //   add: (a, b) => a + b,
@@ -26,59 +27,78 @@ require(['message-rpc', 'remote-object', 'monitor'], (MessageRPC, RemoteObject, 
   //   myProperty: 10
   // }
 
-  function ImageWidget(){
+  // function ImageWidget(){
+  //
+  //   let src = 'pre'
+  //   let listener
+  //
+  //   const remoteApi = {
+  //     getSrc: () => src,
+  //     setSrc: newSrc => {
+  //       src = newSrc
+  //     },
+  //     setSrcListener: l => {
+  //       listener = l
+  //     }
+  //   }
+  //
+  //   const localApi = {
+  //     getSrc: () => src,
+  //     setSrc: newSrc => {
+  //       src = newSrc
+  //       if(listener)
+  //         listener(src)
+  //     }
+  //   }
+  //   return {remoteApi, localApi}
+  // }
+  //
+  // const image = ImageWidget()
+  //
 
-    let src = 'pre'
-    let listener
-
-    const remoteApi = {
-      getSrc: () => src,
-      setSrc: newSrc => {
-        src = newSrc
-      },
-      setSrcListener: l => {
-        listener = l
-      }
-    }
-
-    const localApi = {
-      getSrc: () => src,
-      setSrc: newSrc => {
-        src = newSrc
-        if(listener)
-          listener(src)
-      }
-    }
-    return {remoteApi, localApi}
-  }
-
-  const image = ImageWidget()
+  // function Button() {
+  //
+  //   return {
+  //     label: 'Button 1',
+  //     clickHandler: undefined
+  //   }
+  // }
+  //
+  // const {remoteApi, localApi} = ExposedObjectProxy(Button())
+  // const platformApi = RemoteObject({
+  //   getImage: () => remoteApi
+  // })
 
   const platformApi = {
-    getImage: () => RemoteObject(image.remoteApi)
+    f: () => {
+      console.log('@platform')
+      return RemoteFunction((a, b) => a + b)
+    }
   }
 
-  MessageRPC(platformApi, new Worker('src/app.js')/*, ConsoleMonitor('Platform')*/).then(appApi => {
-    console.log('before', image.localApi.getSrc())
+  MessageRPC(RemoteApi(platformApi), new Worker('src/app.js')/*, ConsoleMonitor('Platform')*/).then(({api: appApi, createSharedObject}) => {
+    const so_ = createSharedObject({x: 10})
+    const so = SharedObjectProxy(so_)
+    console.log('platform get x 0:1', so.x, 10)
+    so.x = 20
+    console.log('platform get x 0:2', so.x, 20)
+    appApi.setSharedObject(so_)
+
     setTimeout(() => {
-      console.log('after', image.localApi.getSrc())
-    }, 2000)
-    // appApi.initApp(RemoteObject(platformApi))
-    //
-    // setTimeout(() => {
-    //   platformApi.myProperty.set(20)
-    // }, 3000)
-    //
-    // setTimeout(() => {
-    //   // console.log('platform, get 1 sec', platformApi.myProperty.get())
-    // }, 1000)
-    //
-    // setTimeout(() => {
-    //   // console.log('platform, get 5 sec', platformApi.myProperty.get())
-    // }, 5000)
-    //
-    // setTimeout(() => {
-    //   // console.log('platform, get 9 sec', platformApi.myProperty.get())
-    // }, 9000)
+      console.log('platform get x 2', so.x, 20)
+    }, 4000)
+
+    setTimeout(() => {
+      so.x = 30
+      console.log('platform get x 3', so.x, 30)
+    }, 6000)
+
+    setTimeout(() => {
+      console.log('platform get x 4', so.x, 30)
+    }, 8000)
+
+    setTimeout(() => {
+      console.log('platform get x 6', so.x, 40)
+    }, 12000)
   })
 })

@@ -2,15 +2,13 @@
 
 define([], () => {
 
-  function createProperty(api, propertyNme, propertyValue, onUpdate) {
-    api[propertyNme] = {
+  function createProperty(propertyValue, onUpdate) {
+    return {
       get: () => propertyValue,
-      set: newValue => {
+      set: (newValue, triggerUpdate = true) => {
         propertyValue = newValue
-        onUpdate(propertyValue)
-      },
-      _set: newValue => {
-        propertyValue = newValue
+        if(triggerUpdate)
+          onUpdate(propertyValue)
       }
     }
   }

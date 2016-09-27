@@ -180,96 +180,10 @@ define(['./buffer'], ({BufferReader, BufferWriter}) => {
       })
 
       return buf
-      // function writeToBuffer(protocol, value) {
-      //   const protocolName = getProtocolName(protocol)
-      //   switch (protocolName) {
-      //     case 'uint8':
-      //     case 'uint16':
-      //     case 'uint32':
-      //     case 'int8':
-      //     case 'int16':
-      //     case 'int32':
-      //     case 'float32':
-      //     case 'float64':
-      //     case 'string':
-      //       writer[protocolName](value)
-      //       break
-      //     case 'array':
-      //       const elementProtocol = protocol.array
-      //       writer.uint16(value.length)
-      //       for (let i = 0; i < value.length; i++) {
-      //         writeToBuffer(elementProtocol, value[i])
-      //       }
-      //       break
-      //     case 'enum':
-      //       const enumValues = protocol.enum
-      //       writer.uint8(encodeEnum(value, enumValues))
-      //       break
-      //     case 'struct':
-      //       Object.keys(protocol.struct).forEach(key => {
-      //         const fieldProtocol = protocol.struct[key]
-      //         writeToBuffer(fieldProtocol, value[key])
-      //       })
-      //       break
-      //     case 'union':
-      //       const tag = protocol.union.tag
-      //       const unionCase = value[tag]
-      //       const caseProtocol = protocol.union.cases[unionCase]
-      //       writeToBuffer(caseProtocol, value)
-      //       break
-      //     default:
-      //       writeToBuffer(getProtocol(protocolName), value)
-      //   }
-      // }
-
-      // writeToBuffer(getProtocol(rootProtocolName), value)
     }
 
     return {read, write}
   }
-
-  // const {read, write} = protocolCodec(messageProtocol)
-  // const buf = new ArrayBuffer(1024 * 64)
-
-  // const message = {type: 'batch', rpcMessages: [
-  //   {
-  //     type: 'call',
-  //     id: 1,
-  //     stub: 345,
-  //     func: 'myFunc',
-  //     args: [
-  //       {
-  //         type: 'data-value',
-  //         data: 'some json'
-  //       },
-  //       {
-  //         type: 'api-value',
-  //         api: ['a', 'b'],
-  //         stub: 123
-  //       }
-  //     ],
-  //     returnPriority: 'immediate'
-  //   },
-  //   {
-  //     type: 'return',
-  //     id: 1,
-  //     stub: 345,
-  //     value: {
-  //       type: 'data-value',
-  //       data: '52'
-  //     }
-  //   },
-  //   {
-  //     type: 'error',
-  //     id: 1,
-  //     stub: 345,
-  //     error: 'err'
-  //   },
-  //
-  //
-  // ]}
-  // const buf = write(message)
-  // const m = read(buf)
 
   return protocolCodec
 })

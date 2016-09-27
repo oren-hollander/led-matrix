@@ -8,7 +8,8 @@ define(['lodash', 'remote-object'],
 
       const o = {
         prop1: 42,
-        f1: () => 42
+        f1: () => 42,
+        setProp1: value => o.prop1 = value
       }
 
       const {remoteApi, localApi} = ExposedObject(o)

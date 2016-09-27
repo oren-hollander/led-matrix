@@ -4,6 +4,7 @@ define([], () => {
   const CallPriority = Symbol('callPriority')
   const ReturnPriority = Symbol('returnPriority')
 
+  // todo change priorities to be numbers: None: -2, Immediate: -1, High: 0, ...
   const MessagePriorities = {
     Immediate: 'immediate',
     High: 'high',
