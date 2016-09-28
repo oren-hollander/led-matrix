@@ -16,12 +16,12 @@ define(['messages', './buffer/proto-buf'], (Messages, protocolCodec) => {
 
   const protoBufSerializer = {
     serialize: value => {
-      const buffers = write(value)
+      const buffers = write('Message', value)
       return {message: {buffers}, transferList: buffers}
     },
 
     deserialize: value => {
-      return read(value.buffers)
+      return read('Message', value.buffers)
     }
   }
 
