@@ -105,13 +105,13 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
       }
     }
 
-    function handleOutgoingApiCall(id, stub, func, args, callPriority, returnPriority, settler) {
+    function handleOutgoingApiCall(id, stub, func, args, callPriority, returnPriority, settler, protocols) {
       if(returnPriority === MessagePriorities.None)
         settler.resolve()
       else
         settlers.set(id, settler)
 
-      const rpcMessage = Messages.rpcApiCall(id, stub, func, args.map(processOutgoingRpcValue), returnPriority)
+      const rpcMessage = Messages.rpcApiCall(id, stub, func, args.map(processOutgoingRpcValue), returnPriority, protocols)
 
       sendMessageByPriority(rpcMessage, callPriority)
     }

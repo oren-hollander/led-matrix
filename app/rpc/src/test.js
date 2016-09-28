@@ -19,7 +19,7 @@ require.config({
 });
 
 require(['jasmine-boot'], function () {
-  require(['./priority.specs', '../src/remote-object.specs'], function(){
+  require(['buffer/buffer.specs', 'buffer/proto-buf.specs'], function(){
     //trigger Jasmine
     window.onload();
   })

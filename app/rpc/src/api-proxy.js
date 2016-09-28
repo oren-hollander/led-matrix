@@ -1,7 +1,7 @@
 'use strict'
 
-define(['lodash', 'priority', 'promise-util', 'id-gen', 'property'], (_, {CallPriority, ReturnPriority,
-  MessagePriorities}, {createPromiseWithSettler}, IdGenerator, createProperty) => {
+define(['lodash', 'priority', 'promise-util', 'id-gen', 'property', 'api-util'], (_, {CallPriority, ReturnPriority,
+  MessagePriorities}, {createPromiseWithSettler}, IdGenerator, createProperty, {ProtocolSymbol}) => {
 
   const defaultPriorities = {
     [CallPriority]: MessagePriorities.High,
@@ -44,8 +44,9 @@ define(['lodash', 'priority', 'promise-util', 'id-gen', 'property'], (_, {CallPr
       .map(functionName => {
         const func = (...args) => {
           const {promise, resolve, reject} = createPromiseWithSettler()
+          const protocols = func[ProtocolSymbol]
           callHandler(callIdGenerator.uniqueId(), stub, functionName, args,
-            getPriority(func, CallPriority), getPriority(func, ReturnPriority), {resolve, reject})
+            getPriority(func, CallPriority), getPriority(func, ReturnPriority), {resolve, reject}, protocols)
           return promise
         }
         return [functionName, func]

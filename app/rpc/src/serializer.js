@@ -1,6 +1,6 @@
 'use strict'
 
-define(['messages', '../../buffer/proto-buf'], (Messages, protocolCodec) => {
+define(['messages', './buffer/proto-buf'], (Messages, protocolCodec) => {
 
   const jsonSerializer = {
     serialize: value => ({message: JSON.stringify(value), transferList: []}),
@@ -12,18 +12,18 @@ define(['messages', '../../buffer/proto-buf'], (Messages, protocolCodec) => {
     deserialize: value => value
   }
 
-   const {read, write} = protocolCodec(Messages.messageProtocol)
+  const {read, write} = protocolCodec(Messages.messageProtocol)
 
   const protoBufSerializer = {
     serialize: value => {
-      const buf = write(value)
-      return {message: {buf: buf}, transferList: [buf]}
+      const buffers = write(value)
+      return {message: {buffers}, transferList: buffers}
     },
 
     deserialize: value => {
-      return read(value.buf)
+      return read(value.buffers)
     }
   }
 
-  return nativeSerializer // nativeSerializer // jsonSerializer // protoBufSerializer
+  return protoBufSerializer // nativeSerializer // jsonSerializer // protoBufSerializer
 })

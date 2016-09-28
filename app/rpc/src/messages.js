@@ -33,7 +33,8 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
   const rpcFunction = stub => ({type: MessageTypes.Function, stub})
   const rpcSharedObject = (stub, properties) => ({type: MessageTypes.SharedObject, properties, stub})
 
-  const rpcApiCall = (id, stub, func, args, returnPriority) => rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority})
+  const rpcApiCall = (id, stub, func, args, returnPriority, protocols) =>
+    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority, protocols})
   const rpcFunctionCall = (id, stub, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, stub, args, returnPriority})
   const rpcReturn = (id, stub, value, callTimestamp) => debug
     ? rpcMessage(MessageTypes.Return, {id, stub, value, callTimestamp})

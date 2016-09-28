@@ -17,8 +17,9 @@ require(['message-rpc', 'remote-object', 'priority'], (MessageRPC, {RemoteApi}, 
   let platformApi
 
   const appApi = {
-    forth: count => {
-      platformApi.back(count)
+    forth: (count, image) => {
+      platformApi.back(count, image)
+      return image
     }
   }
 
