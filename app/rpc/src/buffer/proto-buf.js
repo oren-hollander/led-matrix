@@ -17,15 +17,13 @@ define(['./buffer'], ({SerialBufferReader, SerialBufferWriter}) => {
     return enumValues[value]
   }
 
-  function protocolCodec(protocol) {
-
-    const rootProtocolName = getProtocolName(protocol)
+  function protocolCodec(protocols) {
 
     const getProtocol = protocolName => {
-      return protocol[rootProtocolName][protocolName]
+      return protocols[protocolName]
     }
 
-    const read = buffers => {
+    const read = (protocolName, buffers) => {
       const reader = SerialBufferReader(buffers)
 
       function readValue(protocol) {
@@ -91,12 +89,12 @@ define(['./buffer'], ({SerialBufferReader, SerialBufferWriter}) => {
         }
       }
 
-      return readValue(getProtocol(rootProtocolName))
+      return readValue(getProtocol(protocolName))
     }
 
     const toChatCode = ch => ch.charCodeAt(0)
 
-    const write = (value) => {
+    const write = (protocolName, value) => {
       const writer = SerialBufferWriter()
 
       function writeValue(protocol, value){
@@ -165,7 +163,7 @@ define(['./buffer'], ({SerialBufferReader, SerialBufferWriter}) => {
         }
       }
 
-      writeValue(getProtocol(rootProtocolName), value)
+      writeValue(getProtocol(protocolName), value)
 
       return writer.buffers
     }
