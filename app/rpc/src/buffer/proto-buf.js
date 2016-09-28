@@ -84,6 +84,9 @@ define(['./buffer'], ({SerialBufferReader, SerialBufferWriter}) => {
             const tagValue = decodeEnum(tagCode, tagValues)
             const caseProtocol = protocol.union.cases[tagValue]
             return readValue(caseProtocol)
+          case 'protocol':
+            const v = readValue(readValue('ascii'))
+            return v
           default:
             return readValue(getProtocol(protocolName))
         }
@@ -157,6 +160,10 @@ define(['./buffer'], ({SerialBufferReader, SerialBufferWriter}) => {
             const unionCase = value[tag]
             const caseProtocol = protocol.union.cases[unionCase]
             writeValue(caseProtocol, value)
+            break
+          case 'protocol':
+            writeValue('ascii', value.protocol)
+            writeValue(value.protocol, value.value)
             break
           default:
             writeValue(getProtocol(protocolName), value)

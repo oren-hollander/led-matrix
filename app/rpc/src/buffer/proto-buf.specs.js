@@ -3,6 +3,14 @@
 define(['lodash', './proto-buf'], (_, protocolCodec) => {
 
   describe('Protocol Buffers', function () {
+    it('int8', function () {
+      const protocol = {myInt: 'int8'}
+      const {read, write} = protocolCodec(protocol)
+      const buf = write('myInt', -3)
+      const myInt = read('myInt', buf)
+      expect(myInt).toEqual(-3)
+    })
+
     it('struct', function () {
       const protocol = {
         myStruct: {
@@ -88,6 +96,94 @@ define(['lodash', './proto-buf'], (_, protocolCodec) => {
       const myUnion2 = read('myUnion', buf2)
       expect(myUnion1).toEqual({t: 'a', s: 'hello'})
       expect(myUnion2).toEqual({t: 'b', n: -42})
+    })
+
+    fit('dynamic protocols', function () {
+      const protocol = {
+        messageType: {
+          enum: ['function', 'return']
+        },
+        myDynamicProtocol: {
+          union: {
+            tag: 'type',
+            cases: {
+              function: {
+                struct: {
+                  type: 'messageType',
+                  func: 'string',
+                  args: 'protocol'
+                }
+              },
+              return: {
+                struct: {
+                  type: 'messageType',
+                  value: 'protocol'
+                }
+              }
+            }
+          }
+        },
+        addProtocol: {
+          tuple: ['int8', 'int8']
+        },
+        squareProtocol: {
+          tuple: ['int8']
+        }
+      }
+
+      const message1 = {
+        type: 'function',
+        func: 'add',
+        args: {
+          protocol: 'addProtocol',
+          value: [3, 4]
+        },
+      }
+
+      const message2 = {
+        type: 'function',
+        func: 'square',
+        args: {
+          protocol: 'squareProtocol',
+          value: [2]
+        }
+      }
+
+      const message3 = {
+        type: 'return',
+        value: {
+          protocol: 'int8',
+          value: 7
+        }
+      }
+
+      const result1 = {
+        type: 'function',
+        func: 'add',
+        args: [3, 4]
+      }
+
+      const result2 = {
+        type: 'function',
+        func: 'square',
+        args: [2]
+      }
+
+      const result3 = {
+        type: 'return',
+        value: 7
+      }
+
+      const {read, write} = protocolCodec(protocol)
+      const buf1 = write('myDynamicProtocol', message1)
+      const buf2 = write('myDynamicProtocol', message2)
+      const buf3 = write('myDynamicProtocol', message3)
+      const myDynamicProtocol1 = read('myDynamicProtocol', buf1)
+      const myDynamicProtocol2 = read('myDynamicProtocol', buf2)
+      const myDynamicProtocol3 = read('myDynamicProtocol', buf3)
+      expect(myDynamicProtocol1).toEqual(result1)
+      expect(myDynamicProtocol2).toEqual(result2)
+      expect(myDynamicProtocol3).toEqual(result3)
     })
   })
 })
