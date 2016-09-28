@@ -112,10 +112,10 @@ define(['lodash', 'messages'], (_, Messages) => {
         console.groupEnd()
       },
       [Messages.Types.Value]: message => {
-        if(message.data === undefined)
+        if(message.value === undefined)
           console.log('No value')
         else
-          console.log(`Value: ${message.data}`)
+          console.log(`Value: ${message.value}`)
       },
       [Messages.Types.Api]: message => {
         console.groupCollapsed(`Api: ${message.stub}`)

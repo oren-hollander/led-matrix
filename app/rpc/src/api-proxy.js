@@ -44,9 +44,8 @@ define(['lodash', 'priority', 'promise-util', 'id-gen', 'property', 'api-util'],
       .map(functionName => {
         const func = (...args) => {
           const {promise, resolve, reject} = createPromiseWithSettler()
-          const protocols = func[ProtocolSymbol]
           callHandler(callIdGenerator.uniqueId(), stub, functionName, args,
-            getPriority(func, CallPriority), getPriority(func, ReturnPriority), {resolve, reject}, protocols)
+            getPriority(func, CallPriority), getPriority(func, ReturnPriority), {resolve, reject})
           return promise
         }
         return [functionName, func]

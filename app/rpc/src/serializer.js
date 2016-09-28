@@ -1,29 +1,36 @@
 'use strict'
 
-define(['messages', './buffer/proto-buf'], (Messages, protocolCodec) => {
+define(['lodash', 'messages', './buffer/proto-buf'], (_, Messages, protocolCodec) => {
 
-  const jsonSerializer = {
-    serialize: value => ({message: JSON.stringify(value), transferList: []}),
-    deserialize: value => JSON.parse(value)
-  }
-
-  const nativeSerializer = {
-    serialize: value => ({message: value, transferList: []}),
-    deserialize: value => value
-  }
-
-  const {read, write} = protocolCodec(Messages.messageProtocol)
-
-  const protoBufSerializer = {
-    serialize: value => {
-      const buffers = write('Message', value)
-      return {message: {buffers}, transferList: buffers}
-    },
-
-    deserialize: value => {
-      return read('Message', value.buffers)
+  function JsonSerializer() {
+    return {
+      serialize: value => ({message: JSON.stringify(value), transferList: []}),
+      deserialize: value => JSON.parse(value)
     }
   }
 
-  return protoBufSerializer // nativeSerializer // jsonSerializer // protoBufSerializer
+  function NativeSerializer() {
+    return {
+      serialize: value => ({message: value, transferList: []}),
+      deserialize: value => value
+    }
+  }
+
+  function ProtoBufSerializer() {
+
+    const {read, write} = protocolCodec(Messages.messageProtocol)
+
+    return {
+      serialize: value => {
+        const buffers = write('Message', value)
+        return {message: {buffers}, transferList: buffers}
+      },
+
+      deserialize: value => {
+        return read('Message', value.buffers)
+      }
+    }
+  }
+
+  return ProtoBufSerializer // ProtoBufSerializer // JsonSerializer // NativeSerializer
 })

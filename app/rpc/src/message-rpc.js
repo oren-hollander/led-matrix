@@ -6,12 +6,13 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
     {createPromiseWithSettler},
     Stubs, {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}, Serializer) => {
 
-  function MessageRPC(localApi, worker, monitor) {
+  function MessageRPC(localApi, worker, monitor, protocols) {
     let initialized = false
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const stubs = Stubs()
     const proxies = Stubs()
+    const serializer = Serializer(protocols)
 
     const localApiStub = stubs.add(localApi)
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
@@ -105,13 +106,13 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
       }
     }
 
-    function handleOutgoingApiCall(id, stub, func, args, callPriority, returnPriority, settler, protocols) {
+    function handleOutgoingApiCall(id, stub, func, args, callPriority, returnPriority, settler) {
       if(returnPriority === MessagePriorities.None)
         settler.resolve()
       else
         settlers.set(id, settler)
 
-      const rpcMessage = Messages.rpcApiCall(id, stub, func, args.map(processOutgoingRpcValue), returnPriority, protocols)
+      const rpcMessage = Messages.rpcApiCall(id, stub, func, _(args).zip(protocols).map(_.spread(processOutgoingRpcValue)).value(), returnPriority)
 
       sendMessageByPriority(rpcMessage, callPriority)
     }
@@ -207,12 +208,12 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
       if(monitor)
         monitor.outgoingMessage(message)
 
-      const {message: messageData, transferList} = Serializer.serialize(message)
+      const {message: messageData, transferList} = serializer.serialize(message)
       worker.postMessage(messageData, transferList)
     }
 
     worker.onmessage = ({data}) => {
-      const message = Serializer.deserialize(data)
+      const message = serializer.deserialize(data)
       if(monitor)
         monitor.incomingMessage(message)
 
@@ -237,11 +238,7 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
 /*
  todo
  ==============
- . try to implement properties using functions and use proxy wrappers
  . proto-buf for proxy functions & properties instead of json
  . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
- . monitoring
- . properties - priorities
-
  */

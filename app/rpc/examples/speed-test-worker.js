@@ -12,18 +12,14 @@ requirejs.config({
   }
 });
 
-require(['message-rpc', 'remote-object', 'priority'], (MessageRPC, {RemoteApi}, {setPriority, MessagePriorities}) => {
-
-  let platformApi
+require(['message-rpc', 'remote-object', 'monitor'], (MessageRPC,
+  {RemoteApi}, {ConsoleMonitor}) => {
 
   const appApi = {
-    forth: (count, image) => {
-      platformApi.back(count, image)
-      return image
+    processImage: image => {
+      // console.log('worker got the image')
     }
   }
 
-  MessageRPC(RemoteApi(appApi), self).then(({api}) => {
-    platformApi = setPriority(api, MessagePriorities.Immediate)
-  })
+  MessageRPC(RemoteApi(appApi), self, undefined/*ConsoleMonitor('worker')*/)
 })
