@@ -1,6 +1,6 @@
 'use strict'
 
-define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
+define(['priority', 'config', 'annotations'], ({MessagePriorities}, {debug}, {Annotations, annotate, getAnnotation, getAnnotations}) => {
   const MessageTypes = {
     Init: 'init',
     Batch: 'batch',
@@ -25,16 +25,16 @@ define(['priority', 'config'], ({MessagePriorities}, {debug}) => {
       return Object.assign({type}, args)
   }
 
-  const init = (api) => ({type: MessageTypes.Init, api})
-  const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
+  const init = (api) => ({type: MessageTypes.Init, api, [Annotations.Serialized]: 'Init'})
+  const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages, [Annotations.Serialized]: 'Batch'})
 
-  const rpcValue = value => ({type: MessageTypes.Value, value})
+  const rpcValue = value => ({type: MessageTypes.Value, value, [Annotations.Serialized]: 'ValueArg'})
   const rpcApi = (stub, functionNames) => ({type: MessageTypes.Api, functionNames, stub})
   const rpcFunction = stub => ({type: MessageTypes.Function, stub})
   const rpcSharedObject = (stub, properties) => ({type: MessageTypes.SharedObject, properties, stub})
 
   const rpcApiCall = (id, stub, func, args, returnPriority) =>
-    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority})
+    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority, [Annotations.Serialized]: 'ApiCall'})
   const rpcFunctionCall = (id, stub, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, stub, args, returnPriority})
   const rpcReturn = (id, stub, value, callTimestamp) => debug
     ? rpcMessage(MessageTypes.Return, {id, stub, value, callTimestamp})

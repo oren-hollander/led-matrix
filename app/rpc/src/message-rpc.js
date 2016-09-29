@@ -1,18 +1,25 @@
 'use strict'
 
-define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer',
-    'property'],
+define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 'stub', 'api-util', 'serializer', 'serializer-registry'],
     (_, Queue, Messages, {MessagePriorities, CallPriority}, {ApiProxy, SharedObjectProxy, FunctionProxy},
     {createPromiseWithSettler},
-    Stubs, {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}, Serializer) => {
+    Stubs, {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}, {CustomMessageSerializer, RpcValueSerializer, JsonSerializer, InitMessageSerializer,
+      MessageSerializerAdapter, RpcApiCallSerializer, BatchMessageSerializer, JsonMessageSerializer}, SerializerRegistry) => {
 
-  function MessageRPC(localApi, worker, monitor, protocols) {
+  function MessageRPC(localApi, worker, serializers, monitor) {
     let initialized = false
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const stubs = Stubs()
     const proxies = Stubs()
-    const serializer = Serializer(protocols)
+    const serializer = JsonMessageSerializer
+    // const serializer = MessageSerializerAdapter(CustomMessageSerializer(SerializerRegistry(_.assign({
+    //   JSON: JsonSerializer,
+    //   Init: InitMessageSerializer,
+    //   Batch: BatchMessageSerializer,
+    //   ApiCall: RpcApiCallSerializer,
+    //   ValueArg: RpcValueSerializer
+    // }, serializers))))
 
     const localApiStub = stubs.add(localApi)
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
@@ -112,7 +119,7 @@ define(['lodash', 'queue', 'messages', 'priority', 'api-proxy', 'promise-util', 
       else
         settlers.set(id, settler)
 
-      const rpcMessage = Messages.rpcApiCall(id, stub, func, _(args).zip(protocols).map(_.spread(processOutgoingRpcValue)).value(), returnPriority)
+      const rpcMessage = Messages.rpcApiCall(id, stub, func, _.map(args, processOutgoingRpcValue), returnPriority)
 
       sendMessageByPriority(rpcMessage, callPriority)
     }

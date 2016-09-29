@@ -19,7 +19,7 @@ require.config({
 });
 
 require(['jasmine-boot'], function () {
-  require(['buffer/buffer.specs', 'buffer/proto-buf.specs'], function(){
+  require(['buffer/buffer.specs', 'buffer/proto-buf.specs', 'serializer.specs', 'annotations.specs'], function(){
     //trigger Jasmine
     window.onload();
   })

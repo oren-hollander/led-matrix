@@ -4,6 +4,9 @@ define(['lodash'], (_) => {
 
   const linearGrowth = size => () => size
 
+  // const exponentialGrowth = (min, max, factor) => size => Math.floor(Math.min((size || min) * factor, max))
+  const exponentialGrowth = (min, max, factor) => size => Math.max(min, Math.min(size * factor, max))
+
   const primitives = {
     uint8: 1,
     uint16: 2,
@@ -27,7 +30,7 @@ define(['lodash'], (_) => {
     return 'peek' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
   }
 
-  function SerialBufferWriter(growth = linearGrowth(256)) {
+  function SerialBufferWriter(growth = exponentialGrowth(256, 65536, 2)) {
 
     const buffers = []
     let offset

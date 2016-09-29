@@ -98,7 +98,7 @@ define(['lodash', './proto-buf'], (_, protocolCodec) => {
       expect(myUnion2).toEqual({t: 'b', n: -42})
     })
 
-    fit('dynamic protocols', function () {
+    it('dynamic protocols', function () {
       const protocol = {
         messageType: {
           enum: ['function', 'return']

@@ -7,13 +7,14 @@ requirejs.config({
   }
 });
 
-require(['lodash', 'message-rpc', 'remote-object', 'priority', '../src/buffer/proto-buf', 'api-util', 'monitor'], (_, MessageRPC, {RemoteApi},
-  {setPriority, MessagePriorities}, protocolCodec, {ProtocolSymbol}, {ConsoleMonitor}) => {
+require(['lodash', 'message-rpc', 'priority', 'annotations', 'examples/speed-test-serializers'],
+  (_, MessageRPC, {setPriority, MessagePriorities}, {Annotations, annotate}, SpeedTestSerializers) => {
 
   const image = _.fill(new Array(65535), {red: 2, green: 30, blue: 67})
+  annotate(image, Annotations.Serialized, 'Image')
 
-  MessageRPC({}, new Worker('speed-test-worker.js'), undefined/*ConsoleMonitor('app')*/).then(({api}) => {
-    const appApi = setPriority(api, MessagePriorities.Immediate, MessagePriorities.None)
+  MessageRPC({}, new Worker('speed-test-worker.js'), SpeedTestSerializers/*ConsoleMonitor('app')*/).then(({api}) => {
+    const appApi = setPriority(api, MessagePriorities.Immediate)
 
     console.time()
     function processImage(count) {
