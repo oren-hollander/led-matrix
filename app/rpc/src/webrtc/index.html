@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Message RPC</title>
+
+    <link rel='manifest' href='manifest.json'>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Game Pad">
+    <link rel="apple-touch-icon" href="images/touch/GamePad_152.png">
+
+    <script src="client.js"></script>
+</head>
+<body>
+    <button onmousedown="buttonMouseDown()">Click me</button>
+    <canvas id="canvas" width="600" height="600" style="border:solid black 1px;">
+        Your browser does not support canvas element.
+    </canvas>
+    <br>
+    <!--<button onclick="startup()">Initialize</button>-->
+    <br>
+    Log: <pre id="log" style="border: 1px solid #ccc;"></pre>
+</body>
+</html>

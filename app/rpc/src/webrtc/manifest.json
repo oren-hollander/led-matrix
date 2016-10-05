@@ -1,0 +1,36 @@
+{
+  "name": "Game Pad",
+  "short_name": "Game Pad",
+  "icons": [{
+        "src": "images/touch/Game Pad_128.png",
+        "type": "image/png",
+        "sizes": "128x128"
+      }, {
+        "src": "images/touch/Game Pad_152.png",
+        "type": "image/png",
+        "sizes": "152x152"
+      }, {
+        "src": "images/touch/Game Pad_144.png",
+        "type": "image/png",
+        "sizes": "144x144"
+      }, {
+        "src": "images/touch/Game Pad_192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "images/touch/Game Pad_256.png",
+        "type": "image/png",
+        "sizes": "256x256"
+      },
+      {
+        "src": "images/touch/Game Pad_512.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }],
+  "start_url": "/?homescreen=1",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#2196F3",
+  "theme_color": "#2196F3"
+}
