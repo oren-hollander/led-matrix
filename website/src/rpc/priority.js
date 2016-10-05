@@ -1,16 +1,22 @@
 'use strict'
 
-define([], () => {
-  const CallPriority = Symbol('callPriority')
-  const ReturnPriority = Symbol('returnPriority')
+define([
+  'util/annotations'
+], (
+  {registerAnnotation}
+) => {
+  const CallPriority = Symbol('call-priority')
+  const ReturnPriority = Symbol('return-priority')
 
-  // todo change priorities to be numbers: None: -2, Immediate: -1, High: 0, ...
+  registerAnnotation('CallPriority', CallPriority)
+  registerAnnotation('ReturnPriority', ReturnPriority)
+
   const MessagePriorities = {
-    Immediate: 'immediate',
-    High: 'high',
-    Medium: 'medium',
-    Low: 'low',
-    None: 'none'
+    None: -2,
+    Immediate: -1,
+    High: 0,
+    Medium: 1000/16,
+    Low: 100
   }
 
   const setPriority = (functionOrApi, callPriority, returnPriority = callPriority) => {

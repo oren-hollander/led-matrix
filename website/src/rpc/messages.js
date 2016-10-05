@@ -1,13 +1,9 @@
 'use strict'
 
 define([
-  'rpc/priority',
-  'rpc/config',
-  'util/annotations'
+  'rpc/config'
 ], (
-  {MessagePriorities},
-  {debug},
-  {Annotations, annotate, getAnnotation, getAnnotations}
+  {debug}
 ) => {
 
   const MessageTypes = {
@@ -34,16 +30,16 @@ define([
       return Object.assign({type}, args)
   }
 
-  const init = (api) => ({type: MessageTypes.Init, api, [Annotations.Serialized]: 'Init'})
-  const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages, [Annotations.Serialized]: 'Batch'})
+  const init = api => ({type: MessageTypes.Init, api})
+  const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
 
-  const rpcValue = value => ({type: MessageTypes.Value, value, [Annotations.Serialized]: 'ValueArg'})
+  const rpcValue = value => ({type: MessageTypes.Value, value})
   const rpcApi = (stub, functionNames) => ({type: MessageTypes.Api, functionNames, stub})
   const rpcFunction = stub => ({type: MessageTypes.Function, stub})
   const rpcSharedObject = (stub, properties) => ({type: MessageTypes.SharedObject, properties, stub})
 
   const rpcApiCall = (id, stub, func, args, returnPriority) =>
-    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority, [Annotations.Serialized]: 'ApiCall'})
+    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority})
   const rpcFunctionCall = (id, stub, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, stub, args, returnPriority})
   const rpcReturn = (id, stub, value, callTimestamp) => debug
     ? rpcMessage(MessageTypes.Return, {id, stub, value, callTimestamp})
@@ -63,167 +59,7 @@ define([
   const isProxyPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.ProxyPropertyUpdate
   const isStubPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.StubPropertyUpdate
 
-  const messageProtocol = {
-    MessageType: {
-      enum: [MessageTypes.Init, MessageTypes.Batch],
-    },
-    RpcMessageType: {
-      enum: [MessageTypes.ApiCall, MessageTypes.FunctionCall, MessageTypes.Return, MessageTypes.Error,
-        MessageTypes.StubPropertyUpdate, MessageTypes.ProxyPropertyUpdate]
-    },
-    RpcValueType: {
-      enum: [MessageTypes.Value, MessageTypes.Api, MessageTypes.Function, MessageTypes.SharedObject]
-    },
-    Priority: {
-      enum: [MessagePriorities.Immediate, MessagePriorities.High, MessagePriorities.Medium, MessagePriorities.Low, MessagePriorities.None]
-    },
-
-    RpcValueValue: {
-      struct: {
-        type: 'RpcValueType',
-        value: 'json'
-      }
-    },
-
-    RpcApiValue: {
-      struct: {
-        type: 'RpcValueType',
-        functionNames: {array: 'string'},
-        stub: 'uint32'
-      }
-    },
-
-    RpcFunctionValue: {
-      struct: {
-        type: 'RpcValueType',
-        stub: 'uint32'
-      }
-    },
-
-    RpcSharedObjectProperty: {
-      struct: {
-        name: 'string',
-        value: 'json'
-      }
-    },
-
-    RpcSharedObjectValue: {
-      struct: {
-        type: 'RpcValueType',
-        properties: 'json', //{array: 'RpcSharedObjectProperty'},
-        stub: 'uint32'
-      }
-    },
-
-    RpcValue: {
-      union: {
-        tag: 'type',
-        cases: {
-          [MessageTypes.Value]: 'RpcValueValue',
-          [MessageTypes.Api]: 'RpcApiValue',
-          [MessageTypes.Function]: 'RpcFunctionValue',
-          [MessageTypes.SharedObject]: 'RpcSharedObjectValue'
-        }
-      }
-    },
-
-    RpcApiCall: {
-      struct: {
-        type: 'RpcMessageType',
-        id: 'uint32',
-        stub: 'uint32',
-        func: 'string',
-        args: {array: 'RpcValue'},
-        returnPriority: 'Priority'
-      }
-    },
-
-    RpcFunctionCall: {
-      struct: {
-        type: 'RpcMessageType',
-        id: 'uint32',
-        stub: 'uint32',
-        args: {array: 'RpcValue'},
-        returnPriority: 'Priority'
-      }
-    },
-
-    RpcReturn: {
-      struct: {
-        type: 'RpcMessageType',
-        id: 'uint32',
-        stub: 'uint32',
-        value: 'RpcValue'
-      }
-    },
-
-    RpcError: {
-      struct: {
-        type: 'RpcMessageType',
-        id: 'uint32',
-        stub: 'uint32',
-        error: 'string'
-      }
-    },
-
-    RpcStubPropertyUpdate: {
-      struct: {
-        type: 'RpcMessageType',
-        stub: 'uint32',
-        prop: 'string',
-        value: 'json'
-      }
-    },
-
-    RpcProxyPropertyUpdate: {
-      struct: {
-        type: 'RpcMessageType',
-        stub: 'uint32',
-        prop: 'string',
-        value: 'json'
-      }
-    },
-
-    RpcMessage: {
-      union: {
-        tag: 'type',
-        cases: {
-          [MessageTypes.ApiCall]: 'RpcApiCall',
-          [MessageTypes.FunctionCall]: 'RpcFunctionCall',
-          [MessageTypes.Return]: 'RpcReturn',
-          [MessageTypes.Error]: 'RpcError',
-          [MessageTypes.StubPropertyUpdate]: 'RpcStubPropertyUpdate',
-          [MessageTypes.ProxyPropertyUpdate]: 'RpcProxyPropertyUpdate'
-        }
-      }
-    },
-
-    BatchMessage: {
-      struct: {
-        type: 'MessageType',
-        rpcMessages: {array: 'RpcMessage'}
-      }
-    },
-
-    InitMessage: {
-      struct: {
-        type: 'MessageType',
-        api: {array: 'string'}
-      }
-    },
-
-    Message: {
-      union: {
-        tag: 'type',
-        cases: {
-          [MessageTypes.Init]: 'InitMessage',
-          [MessageTypes.Batch]: 'BatchMessage'
-        }
-      }
-    }
-  }
-
   return {Types: MessageTypes, init, batch, rpcApiCall, rpcFunctionCall, rpcReturn, rpcError, rpcStubPropertyUpdate, rpcProxyPropertyUpdate,
     rpcValue, rpcApi, rpcFunction, rpcSharedObject,
-    isApiCall, isFunctionCall, isReturn, isError, isProxyPropertyUpdate, isStubPropertyUpdate, messageProtocol}
+    isApiCall, isFunctionCall, isReturn, isError, isProxyPropertyUpdate, isStubPropertyUpdate}
 })

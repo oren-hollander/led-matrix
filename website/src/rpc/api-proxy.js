@@ -2,7 +2,6 @@
 
 define([
   'lodash',
-
   'rpc/priority',
   'util/promise',
   'util/id-gen',

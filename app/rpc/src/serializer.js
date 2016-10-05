@@ -4,6 +4,7 @@ define(['lodash', 'annotations', 'messages', 'priority', './buffer/proto-buf', '
   {Annotations, annotate, getAnnotation, getAnnotations}, Messages, {MessagePriorities}, protocolCodec,
   {SerialBufferWriter, SerialBufferReader}, Enum) => {
 
+  registerAnnotation('Serialized', Symbol('serialized'))
 
   function MessageSerializerAdapter(serializer) {
     return {

@@ -2,39 +2,23 @@
 
 define([
   'lodash',
-  'util/annotations',
+  '../util/annotations',
   'rpc/messages',
   'rpc/priority',
   'buffer/proto-buf',
   'buffer/buffer',
-  'util/enum'],
-  (_,
-    {Annotations, getAnnotation},
-   Messages,
-    {MessagePriorities},
-   protocolCodec,
-    {SerialBufferWriter, SerialBufferReader},
-   Enum) => {
-
-  function MessageSerializerAdapter(serializer) {
-    return {
-      serialize: value => {
-        const buffers = serializer.serialize(value)
-        return {message: {buffers}, transferList: buffers}
-      },
-      deserialize: value => serializer.deserialize(value.buffers)
-    }
-  }
-
-  const JsonMessageSerializer = {
-    serialize: value => ({message: JSON.stringify(value), transferList: []}),
-    deserialize: value => JSON.parse(value)
-  }
-
-  const NativeMessageSerializer = {
-    serialize: value => ({message: value, transferList: []}),
-    deserialize: value => value
-  }
+  'util/enum',
+  'buffer/io'
+], (
+  _,
+  {Annotations, getAnnotation},
+  Messages,
+  {MessagePriorities},
+  protocolCodec,
+  {SerialBufferWriter, SerialBufferReader},
+  Enum,
+  {DataWriter, DataReader}
+) => {
 
   function ProtoBufMessageSerializer() {
 
@@ -50,46 +34,6 @@ define([
         return read('Message', value.buffers)
       }
     }
-  }
-
-  const toChatCode = ch => ch.charCodeAt(0)
-
-  function DataWriter(serialWriter) {
-    const stringWriter = {
-      string: s => {
-        serialWriter.uint32(s.length)
-        _(s).map(toChatCode).forEach(serialWriter.uint16)
-      },
-      ascii: s => {
-        serialWriter.uint32(s.length)
-        _(s).map(toChatCode).forEach(serialWriter.uint8)
-      }
-    }
-
-    return _.assign(stringWriter, serialWriter)
-  }
-
-  function DataReader(serialReader) {
-    const stringReader = {
-      string: () => {
-        const length = serialReader.uint32()
-        let string = ''
-        for (let i = 0; i < length; i++) {
-          string += String.fromCharCode(serialReader.uint16())
-        }
-        return string
-      },
-      ascii: () => {
-        const length = serialReader.uint32()
-        let string = ''
-        for (let i = 0; i < length; i++) {
-          string += String.fromCharCode(serialReader.uint8())
-        }
-        return string
-      }
-    }
-
-    return _.assign(stringReader, serialReader)
   }
 
   function ObjectWriter(dataWriter, serializerRegistry) {

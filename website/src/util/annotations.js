@@ -1,15 +1,13 @@
 'use strict'
 
 define(['lodash'], (_) => {
-  const Annotations = {
-    Serialized: Symbol('serialized'),
-    CallPriority: Symbol('call-priority'),
-    ReturnPriority: Symbol('return-priority'),
-    Api: Symbol('api'),
-    Property: Symbol('property'),
-    SharedObject: Symbol('shared-object'),
-    Function: Symbol('function'),
-    Protocol: Symbol('protocol')
+  const Annotations = {}
+
+  function registerAnnotation(name, symbol) {
+    if(Annotations[name])
+      throw new Error(`Annotation ${name} already registered`)
+
+    Annotations[name] = symbol
   }
 
   function annotate(object, annotation, value) {
@@ -22,7 +20,6 @@ define(['lodash'], (_) => {
   }
 
   function getAnnotation(object, annotation) {
-
     if(_.some(Annotations, _.partial(_.eq, annotation))){
       return object[annotation]
     }
@@ -35,5 +32,5 @@ define(['lodash'], (_) => {
     return _.intersection(Object.getOwnPropertySymbols(object), _.values(Annotations))
   }
 
-  return {Annotations, annotate, getAnnotation, getAnnotations}
+  return {Annotations, registerAnnotation, annotate, getAnnotation, getAnnotations}
 })

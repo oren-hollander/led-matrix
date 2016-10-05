@@ -7,9 +7,8 @@ define([
   'rpc/priority',
   'rpc/api-proxy',
   'util/promise',
-  'rpc/stub',
-  'rpc/api-util',
-  'rpc/serializer'
+  'rpc/ref-map',
+  'rpc/api-util'
 ], (
   _,
   Queue,
@@ -17,25 +16,23 @@ define([
   {MessagePriorities, CallPriority},
   {ApiProxy, SharedObjectProxy, FunctionProxy},
   {createPromiseWithSettler},
-  Stubs,
-  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol},
-  {JsonMessageSerializer}
+  RefMap,
+  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}
 ) => {
 
-  function MessageRPC(localApi, messenger, monitor) {
+  function MessageRPC(localApi, messenger, serializer, monitor) {
     let initialized = false
     let queue = Queue(sendBatch)
     const settlers = new Map()
-    const stubs = Stubs()
-    const proxies = Stubs()
-    const serializer = JsonMessageSerializer
+    const stubs = RefMap()
+    const proxies = RefMap()
 
     const localApiStub = stubs.add(localApi)
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
     sendMessage(Messages.init(Object.keys(localApi)))
 
     const createSharedObject = (prototype, updateProperty) => {
-      const stub = stubs.createId()
+      const stub = stubs.reserveRefId()
       const sharedObject = _(prototype)
         .mapValues((value, name) => ({
           [PropertySymbol]: name,
@@ -52,7 +49,7 @@ define([
         stub,
         connected: false
       }
-      sharedObject[CallPriority] = MessagePriorities.High
+      sharedObject[CallPriority] = MessagePriorities.Immediate
 
         stubs.add(sharedObject, stub)
       return sharedObject
@@ -118,7 +115,7 @@ define([
       else {
         if(monitor)
           monitor.queueMessage(message)
-        queue.add(message, priority)
+        queue.schedule(message, priority)
       }
     }
 
@@ -224,11 +221,10 @@ define([
       if(monitor)
         monitor.outgoingMessage(message)
 
-      const {message: messageData} = serializer.serialize(message)
-      messenger.send(messageData)
+      messenger.send(serializer.serialize(message))
     }
 
-    const onmessage = ({data}) => {
+    const onmessage = data => {
       const message = serializer.deserialize(data)
       if(monitor)
         monitor.incomingMessage(message)

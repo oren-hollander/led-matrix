@@ -1,23 +1,8 @@
 'use strict'
 
 define([
-  'rpc/priority'
 ], (
-  {MessagePriorities}
 ) => {
-
-  function priorityDelay(priority) {
-    switch (priority) {
-      case MessagePriorities.High:
-        return 0
-      case MessagePriorities.Medium:
-        return 1000 / 60
-      case MessagePriorities.Low:
-        return 1000 / 25
-      default:
-        throw `Unknown priority ${priority}`
-    }
-  }
 
   function Queue(drain) {
 
@@ -31,10 +16,10 @@ define([
         timeoutId = setTimeout(onDrain, delay)
         lastDelay = delay
       }
-     }
+    }
 
-    function add(rpcMessage, priority) {
-      scheduleDrain(priorityDelay(priority))
+    function schedule(rpcMessage, priority) {
+      scheduleDrain(priority)
       queue.push(rpcMessage)
     }
 
@@ -43,7 +28,7 @@ define([
       queue = []
     }
 
-    return {add}
+    return {schedule}
   }
 
   return Queue

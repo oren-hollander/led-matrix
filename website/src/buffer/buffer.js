@@ -6,103 +6,6 @@ define([
   _
 ) => {
 
-  const linearGrowth = size => () => size
-
-  // const exponentialGrowth = (min, max, factor) => size => Math.floor(Math.min((size || min) * factor, max))
-  const exponentialGrowth = (min, max, factor) => size => Math.max(min, Math.min(size * factor, max))
-
-  const primitives = {
-    uint8: 1,
-    uint16: 2,
-    uint32: 4,
-    int8: 1,
-    int16: 2,
-    int32: 4,
-    float32: 4,
-    float64: 8
-  }
-
-  const setter = primitive => {
-    return 'set' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
-  const getter = primitive => {
-    return 'get' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
-  const peeker = primitive => {
-    return 'peek' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
-  function SerialBufferWriter(growth = exponentialGrowth(256, 65536, 2)) {
-
-    const buffers = []
-    let offset
-    let view
-    let size = 0
-
-    const available = () => view ? view.byteLength - offset : 0
-
-    function ensureSpace(requiredSize){
-      if(available() < requiredSize){
-        const bufSize = growth(size)
-        size += bufSize
-        const buf = new ArrayBuffer(bufSize)
-        buffers.push(buf)
-        view = new DataView(buf)
-        offset = 0
-      }
-    }
-
-    return _(primitives)
-      .mapValues((size, primitive) => value => {
-        ensureSpace(size)
-        view[setter(primitive)](offset, value)
-        offset += size
-      })
-      .assign({buffers})
-      .value()
-  }
-
-  function SerialBufferReader(buffers) {
-
-    let bufferIndex = 0
-    let view = new DataView(buffers[0])
-    let offset = 0
-
-    const available = () => view.byteLength - offset
-
-    function ensureSpace(requiredSize){
-      if(available() < requiredSize){
-        bufferIndex++
-        view = new DataView(buffers[bufferIndex])
-        offset = 0
-      }
-    }
-
-    const peeks = _(primitives)
-      .mapValues((size, primitive) => () => {
-        if(available() >= size){
-          return view[getter(primitive)](offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1])[getter(primitive)](0)
-        }
-      })
-      .mapKeys(_.rearg(peeker, 1))
-      .value()
-
-    return _(primitives)
-      .mapValues((size, primitive) => () => {
-        ensureSpace(size)
-        var value = view[getter(primitive)](offset)
-        offset += size
-        return value
-      })
-      .assign(peeks)
-      .value()
-  }
-
   function BufferReader(buf) {
 
     const view = new DataView(buf)
@@ -156,26 +59,6 @@ define([
       return r
     }
 
-    const string = () => {
-      const length = uint32()
-      let str = ''
-      for(let i = 0; i < length; i++) {
-        str += String.fromCharCode(uint16())
-      }
-      return str
-    }
-
-    const ascii = () => {
-      const length = uint32()
-
-      let asciiString = ''
-      for(let i = 0; i < length; i++) {
-        asciiString += String.fromCharCode(uint8())
-      }
-
-      return asciiString
-    }
-
     const peek = readFunction => () => {
       const currentOffset = offset
       const result = readFunction()
@@ -183,7 +66,7 @@ define([
       return result
     }
 
-    return {uint8, uint16, uint32, int8, int16, int32, float32, float64, string, ascii, peek}
+    return {uint8, uint16, uint32, int8, int16, int32, float32, float64, peek}
   }
 
   function BufferWriter(buf) {
@@ -230,21 +113,7 @@ define([
       offset += 8
     }
 
-    const string = str => {
-      uint32(str.length)
-      for (let i = 0; i < str.length; i++) {
-        uint16(str.charCodeAt(i))
-      }
-    }
-
-    const ascii = str => {
-      uint32(str.length)
-      for (let i = 0; i < str.length; i++) {
-        uint8(str.charCodeAt(i))
-      }
-    }
-
-    return {uint8, uint16, uint32, int8, int16, int32, float32, float64, string, ascii}
+    return {uint8, uint16, uint32, int8, int16, int32, float32, float64}
   }
 
   const Size = {
@@ -260,5 +129,5 @@ define([
     ascii: str => Size.uint32 + str.length * Size.uint8
   }
 
-  return {BufferReader, BufferWriter, Size, SerialBufferWriter, SerialBufferReader}
+  return {BufferReader, BufferWriter, Size}
 })

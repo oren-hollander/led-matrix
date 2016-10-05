@@ -1,7 +1,7 @@
 'use strict'
 
 define([
-  'buffer/buffer'
+  'buffer/serial-buffer'
 ], (
   {SerialBufferReader, SerialBufferWriter}
 ) => {

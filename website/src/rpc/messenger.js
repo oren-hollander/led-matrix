@@ -1,14 +1,28 @@
 'use strict'
 
-define([], () => {
+define([
+  'lodash'
+], (
+  _
+) => {
 
   function WebWorkerMessenger(worker) {
     return {
       send: message => {
-        worker.postMessage(message)
+        if(message instanceof ArrayBuffer){
+          worker.postMessage({message}, [message])
+        }
+        else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+          worker.postMessage({message}, message)
+        }
+        else {
+          worker.postMessage({message})
+        }
       },
       setReceiver: callback => {
-        worker.onmessage = callback
+        worker.onmessage = ({data}) => {
+          callback(data.message)
+        }
       }
     }
   }
@@ -22,10 +36,42 @@ define([], () => {
         })
       },
       setReceiver: callback => {
-        socket.onmessage = callback
+        socket.onmessage = ({data}) => {
+          callback(data)
+        }
       }
     }
   }
 
-  return {WebWorkerMessenger, WebSocketMessenger}
+  function MockMessengers() {
+
+    let onAMessage
+    let onBMessage
+
+    const a = {
+      send: message => {
+        if(onBMessage){
+          _.defer(onBMessage, message)
+        }
+      },
+      setReceiver: callback => {
+        onAMessage = callback
+      }
+    }
+
+    const b = {
+      send: message => {
+        if (onAMessage){
+          _.defer(onAMessage, message)
+        }
+      },
+      setReceiver: callback => {
+          onBMessage = callback
+      }
+    }
+
+    return [a, b]
+  }
+
+  return {WebWorkerMessenger, WebSocketMessenger, MockMessengers}
 })
