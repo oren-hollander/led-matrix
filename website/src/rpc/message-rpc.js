@@ -17,7 +17,7 @@ define([
   {ApiProxy, SharedObjectProxy, FunctionProxy},
   {createPromiseWithSettler},
   RefMap,
-  {ApiSymbol, FunctionSymbol, SharedObjectSymbol}
+  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, RefId}
 ) => {
 
   function MessageRPC(localApi, messenger, serializer, monitor) {
@@ -31,12 +31,9 @@ define([
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
     sendMessage(Messages.init(Object.keys(localApi)))
 
-
     const createSharedObject = (prototype, updateProperty) => {
       const ref = stubs.reserveRefId()
-
       const proxyWithSetters = SharedObjectProxy(prototype, ref, updateProperty)
-
       stubs.add(proxyWithSetters, ref)
       return proxyWithSetters.proxy
     }
@@ -46,7 +43,24 @@ define([
         initialized = true
         sendMessage(Messages.init(Object.keys(localApi)))
         const proxy = ApiProxy(remoteApi, localApiStub, handleOutgoingApiCall)
-        resolveProxy({api: proxy, createSharedObject: prototype => createSharedObject(prototype, handleOutgoingProxyPropertyUpdate)})
+        resolveProxy({
+          api: proxy,
+          createSharedObject: prototype => createSharedObject(prototype, handleOutgoingProxyPropertyUpdate),
+          releaseProxy: obj => {
+            const ref = obj[RefId]
+            if(ref && proxies.has(ref)){
+              proxies.release(ref)
+              sendMessageByPriority(Messages.releaseStub(ref), MessagePriorities.Low)
+            }
+          },
+          releaseStub: obj => {
+            const ref = obj[RefId]
+            if(ref && stubs.has(ref)){
+              stubs.release(ref)
+              sendMessageByPriority(Messages.releaseProxy(ref), MessagePriorities.Low)
+            }
+          }
+        })
       }
     }
 
@@ -69,7 +83,7 @@ define([
       else if(value && value[SharedObjectSymbol]) {
         const properties = _.mapValues(value, _.identity)
         value[SharedObjectSymbol].connected = true
-        return Messages.rpcSharedObject(value[SharedObjectSymbol].ref, properties)
+        return Messages.rpcSharedObject(value[RefId], properties)
       }
       else {
         return Messages.rpcValue(value)
@@ -235,6 +249,12 @@ define([
           break
         case Messages.Types.Batch:
           onBatch(message.rpcMessages)
+          break
+        case Messages.Types.ReleaseProxy:
+          proxies.release(message.ref)
+          break
+        case Messages.Types.ReleaseStub:
+          stubs.release(message.ref)
           break
         default:
           throw 'Unknown message!'

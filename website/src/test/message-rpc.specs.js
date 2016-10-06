@@ -88,17 +88,23 @@ define([
       })
     })
 
-    it('Shared Object Proxy', done => {
+    fit('Shared Object Proxy', done => {
+
+      let releaseProxy
+
       const platformApi = {
         passSharedObject: so => {
           so.x++
           so.y++
+          releaseProxy(so)
         }
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
+      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer).then(({releaseProxy: rp}) => {
+        releaseProxy = rp
+      })
 
-      MessageRPC({}, messenger2, NativeSerializer).then(({api, createSharedObject}) => {
+      MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('App')).then(({api, createSharedObject, releaseStub}) => {
         const so = createSharedObject({x: 10, y: 20})
         api.passSharedObject(so)
 
@@ -109,6 +115,7 @@ define([
           else {
             expect(so.x).toBe(11)
             expect(so.y).toBe(21)
+            releaseStub(so)
             done()
           }
         }

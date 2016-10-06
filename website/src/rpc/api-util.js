@@ -7,6 +7,7 @@ define([], () => {
   const SharedObjectSymbol = Symbol('shared-object')
   const FunctionSymbol = Symbol('function')
   const ProtocolSymbol = Symbol('protocol')
+  const RefId = Symbol('ref-id')
 
-  return {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol, ProtocolSymbol}
+  return {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol, ProtocolSymbol, RefId}
 })

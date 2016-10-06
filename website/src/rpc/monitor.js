@@ -86,6 +86,12 @@ define([
         _.forEach(message.rpcMessages, log)
         console.groupEnd()
       },
+      [Messages.Types.ReleaseProxy]: (message, direction) => {
+        console.log(prefix(`${direction} Release Proxy ${refIdLabel(message.ref)}`))
+      },
+      [Messages.Types.ReleaseStub]: (message, direction) => {
+        console.log(prefix(`${direction} Release Stub ${refIdLabel(message.ref)}`))
+      },
       [Messages.Types.ApiCall]: message => {
         console.groupCollapsed(`${rpcLabel(message)} ${message.func}`)
         console.log(`ID: ${message.id}`)
@@ -189,14 +195,14 @@ define([
 
     function queueMessage(rpcMessage) {
       console.groupCollapsed(prefix(`Add To Queue ~ ${rpcLabel(rpcMessage)}`))
-      log(rpcMessage)
+      log(rpcMessage, '')
       console.groupEnd()
     }
 
     function drainMessageQueue(rpcMessages) {
       console.groupCollapsed(prefix(`Drain Queue ~ ${rpcLabels(rpcMessages)}`))
       rpcMessages.forEach(rpcMessage => {
-        log(rpcMessage)
+        log(rpcMessage, '')
       })
       console.groupEnd()
     }

@@ -23,6 +23,10 @@ define([
       return refs.get(refId)
     }
 
+    function has(refId) {
+      return refs.has(refId)
+    }
+
     function reserveRefId(){
       return idGen.uniqueId()
     }
@@ -31,7 +35,7 @@ define([
       refs.delete(refId)
     }
 
-    return {add, get, reserveRefId, release}
+    return {add, get, has, reserveRefId, release}
   }
 
   return RefMap

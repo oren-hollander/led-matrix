@@ -11,7 +11,7 @@ define([
   {CallPriority, ReturnPriority,  MessagePriorities},
   {createPromiseWithSettler},
   IdGenerator,
-  {SharedObjectSymbol}
+  {SharedObjectSymbol, RefId}
 ) => {
 
   const defaultPriorities = {
@@ -37,18 +37,18 @@ define([
         get: () => value,
         set: newValue => {
           value = newValue
-          if(properties[SharedObjectSymbol].connected)
+          if(properties[SharedObjectSymbol])
             updateProperty(ref, name, newValue, properties[CallPriority])
         },
       })
     })
 
     properties[SharedObjectSymbol] = {
-      ref,
       connected: false
     }
 
     properties[CallPriority] = MessagePriorities.Immediate
+    properties[RefId] = ref
     return {proxy: properties, setters: nonTriggeringSetters}
   }
 
@@ -60,7 +60,7 @@ define([
       return promise
     }
 
-    return Object.assign(f, defaultPriorities)
+    return Object.assign(f, defaultPriorities, {[RefId]: ref})
   }
 
   function ApiProxy(functionNames, ref, callHandler) {
@@ -84,7 +84,7 @@ define([
       .fromPairs()
       .value()
 
-    return Object.assign(api, defaultPriorities)
+    return Object.assign(api, defaultPriorities, {[RefId]: ref})
   }
 
   return {ApiProxy, FunctionProxy, SharedObjectProxy}

@@ -16,6 +16,8 @@ define([
     Error: 'error',
     StubPropertyUpdate: 'stub-prop-update',
     ProxyPropertyUpdate: 'proxy-prop-update',
+    ReleaseProxy: 'release-proxy',
+    ReleaseStub: 'release-stub',
 
     Value: 'value',
     Api: 'api',
@@ -32,6 +34,8 @@ define([
 
   const init = api => ({type: MessageTypes.Init, api})
   const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
+  const releaseProxy = ref => ({type: MessageTypes.ReleaseProxy, ref})
+  const releaseStub = ref => ({type: MessageTypes.ReleaseStub, ref})
 
   const rpcValue = value => ({type: MessageTypes.Value, value})
   const rpcApi = (ref, functionNames) => ({type: MessageTypes.Api, functionNames, ref})
@@ -59,7 +63,8 @@ define([
   const isProxyPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.ProxyPropertyUpdate
   const isStubPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.StubPropertyUpdate
 
-  return {Types: MessageTypes, init, batch, rpcApiCall, rpcFunctionCall, rpcReturn, rpcError, rpcStubPropertyUpdate, rpcProxyPropertyUpdate,
+  return {Types: MessageTypes, init, batch, releaseProxy, releaseStub,
+    rpcApiCall, rpcFunctionCall, rpcReturn, rpcError, rpcStubPropertyUpdate, rpcProxyPropertyUpdate,
     rpcValue, rpcApi, rpcFunction, rpcSharedObject,
     isApiCall, isFunctionCall, isReturn, isError, isProxyPropertyUpdate, isStubPropertyUpdate}
 })
