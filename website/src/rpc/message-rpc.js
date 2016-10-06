@@ -243,6 +243,8 @@ define([
  todo
  ==============
  . support ArrayBuffer passing by ref
- . revoke / garbage collection for stubs
+ . binary serialization with debug info
+ . release refs / garbage collection for stubs
+ . Message relay
  . stress test and compare [proto | native | json] serializers
  */

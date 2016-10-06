@@ -4,12 +4,13 @@ define([
   'lodash',
   'buffer/proto-buf'
 ], (
-  _, protocolCodec
+  _,
+  protocolCodec
 ) => {
 
   describe('Protocol Buffers', function () {
 
-    it('int8', function () {
+    it('int8', () => {
       const protocol = {myInt: 'int8'}
       const {read, write} = protocolCodec(protocol)
       const buf = write('myInt', -3)
@@ -17,7 +18,7 @@ define([
       expect(myInt).toEqual(-3)
     })
 
-    it('struct', function () {
+    it('struct', () => {
       const protocol = {
         myStruct: {
           struct: {
@@ -32,7 +33,7 @@ define([
       expect(myStruct).toEqual({s: 'hello', i: 54})
     })
 
-    it('array', function () {
+    it('array', () => {
       const protocol = {
         myArray: {
           array: 'string'
@@ -44,7 +45,7 @@ define([
       expect(myArray).toEqual(['hello', 'hi'])
     })
 
-    it('tuple', function () {
+    it('tuple', () => {
       const protocol = {
         myTuple: {
           tuple: ['string', 'uint32']
@@ -56,7 +57,7 @@ define([
       expect(myTuple).toEqual(['hello', 54])
     })
 
-    it('variable length tuple', function () {
+    it('variable length tuple', () => {
       const protocol = {
         myVarargs: {
           varargs: ['string', 'uint32']
@@ -68,7 +69,7 @@ define([
       expect(myVarargs).toEqual(['hello', 10, 20, 30])
     })
 
-    it('union', function () {
+    it('union', () => {
       const protocol = {
         myUnion: {
           union: {
@@ -104,7 +105,7 @@ define([
       expect(myUnion2).toEqual({t: 'b', n: -42})
     })
 
-    it('dynamic protocols', function () {
+    it('dynamic protocols', () => {
       const protocol = {
         messageType: {
           enum: ['function', 'return']

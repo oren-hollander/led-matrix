@@ -24,6 +24,7 @@ require(['jasmine-boot'], function () {
     'test/serial-buffer.specs',
     'test/proto-buf.specs',
     'test/priority.specs',
+    'test/relay.specs',
     'test/message-rpc.specs'
   ], function(){
     window.onload();
