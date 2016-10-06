@@ -29,7 +29,7 @@ define([
     Messages.Types.Function,
     Messages.Types.SharedObject
   ])
-  function BinarySerializer(valueSerializers) {
+  function BinarySerializer(valueSerializers, monitor) {
     const valueSerializerCodes = Enum(_(valueSerializers).keys().sortBy().value())
 
     function writeInit(writer, init){
@@ -365,6 +365,9 @@ define([
           default:
             throw new Error(`unknown message type ${value.type}`)
         }
+
+        if(monitor)
+          monitor.bufferAllocation(writer.size(), writer.available())
 
         return writer.buffers
       },

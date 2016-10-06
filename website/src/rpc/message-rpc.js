@@ -62,7 +62,6 @@ define([
       sendMessage(Messages.batch(rpcMessages))
     }
 
-    // todo: consider how to treat the same proxy added multiple times
     function processOutgoingRpcValue(value) {
       if(value && value[ApiSymbol]){
         const ref = stubs.add(value)
@@ -209,16 +208,29 @@ define([
     }
 
     function sendMessage(message) {
-      if(monitor)
+      if(monitor) {
         monitor.outgoingMessage(message)
+        monitor.serializeStart()
+      }
 
-      messenger.send(serializer.serialize(message))
+      const serializedMessage = serializer.serialize(message)
+
+      if(monitor)
+        monitor.serializeEnd()
+
+      messenger.send(serializedMessage)
     }
 
     const onmessage = data => {
-      const message = serializer.deserialize(data)
       if(monitor)
+        monitor.deserializeStart()
+
+      const message = serializer.deserialize(data)
+
+      if(monitor){
+        monitor.deserializeEnd()
         monitor.incomingMessage(message)
+      }
 
       switch (message.type) {
         case Messages.Types.Init:
@@ -245,6 +257,5 @@ define([
  . support ArrayBuffer passing by ref
  . binary serialization with debug info
  . release refs / garbage collection for stubs
- . Message relay
  . stress test and compare [proto | native | json] serializers
  */

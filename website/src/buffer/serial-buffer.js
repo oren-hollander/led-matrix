@@ -10,29 +10,6 @@ define([
 
   const exponentialGrowth = (min, max, factor) => size => Math.max(min, Math.min(size * factor, max))
 
-  const primitives = {
-    uint8: 1,
-    uint16: 2,
-    uint32: 4,
-    int8: 1,
-    int16: 2,
-    int32: 4,
-    float32: 4,
-    float64: 8
-  }
-
-  const setter = primitive => {
-    return 'set' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
-  const getter = primitive => {
-    return 'get' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
-  const peeker = primitive => {
-    return 'peek' + primitive.charAt(0).toUpperCase() + primitive.substring(1)
-  }
-
   function SerialBufferWriter(growth = exponentialGrowth(1024, 65536 * 4, 2)) {
 
     const buffers = []
@@ -53,7 +30,7 @@ define([
       }
     }
 
-    const a = {
+    return {
       uint8: value => {
         ensureSpace(1)
         view.setUint8(offset, value)
@@ -94,10 +71,10 @@ define([
         view.setFloat64(offset, value)
         offset += 8
       },
-      buffers
+      buffers,
+      available,
+      size: () => size
     }
-
-    return a
   }
 
   function SerialBufferReader(buffers) {
@@ -171,62 +148,6 @@ define([
         }
         else {
           return new DataView(buffers[bufferIndex + 1]).getUint8(0)
-        }
-      },
-      peekUint16: () => {
-        if (available() >= 2) {
-          return view.getUint16(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getUint16(0)
-        }
-      },
-      peekUint32: () => {
-        if (available() >= 4) {
-          return view.getUint32(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getUint32(0)
-        }
-      },
-      peekInt8: () => {
-        if (available() >= 1) {
-          return view.getUint8(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getInt8(0)
-        }
-      },
-      peekInt16: () => {
-        if (available() >= 2) {
-          return view.getUint16(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getInt16(0)
-        }
-      },
-      peekInt32: () => {
-        if (available() >= 4) {
-          return view.getUint32(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getInt32(0)
-        }
-      },
-      peekFloat32: () => {
-        if (available() >= 4) {
-          return view.getFloat32(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getFloat32(0)
-        }
-      },
-      peekFloat64: () => {
-        if (available() >= 8) {
-          return view.getFloat64(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getFloat64(0)
         }
       }
     }

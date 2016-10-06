@@ -42,6 +42,7 @@ define([
     const prefix = messageType => `${now()} ${name}: ${messageType}`
 
     const batchLabel = (direction, rpcMessages) => `${direction} Batch ~ ${rpcLabels(rpcMessages)}`
+
     const priorityLabel = priority => {
       switch(priority){
         case -2:
@@ -208,10 +209,16 @@ define([
       log(message, 'Incoming')
     }
 
-    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage}
+    function serializeStart(){}
+    function serializeEnd(size, available){}
+    function deserializeStart(){}
+    function deserializeEnd(){}
+    function bufferAllocation(){}
+
+    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage, serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation}
   }
 
-  function StatsMonitor(){
+  function StatsMonitor(name){
     let stats
 
     function init() {
@@ -221,8 +228,10 @@ define([
         queueDrains: 0,
         outgoingMessages: 0,
         incomingMessages: 0,
-        outgoingCalls: 0,
-        incomingCalls: 0,
+        outgoingApiCalls: 0,
+        incomingApiCalls: 0,
+        outgoingFunctionCalls: 0,
+        incomingFunctionCalls: 0,
         outgoingReturns: 0,
         incomingReturns: 0,
         outgoingErrors: 0,
@@ -230,7 +239,10 @@ define([
         outgoingProxyPropertyUpdates: 0,
         incomingProxyPropertyUpdates: 0,
         outgoingStubPropertyUpdate: 0,
-        incomingStubPropertyUpdate: 0
+        incomingStubPropertyUpdate: 0,
+        buffers: [],
+        serializations: [],
+        deserializations: []
       }
     }
 
@@ -245,36 +257,60 @@ define([
     }
 
     function countsByMessageType(rpcMessages) {
-      return _(rpcMessages)
+      const counts = _(rpcMessages)
         .groupBy('type')
         .mapValues(_.size)
         .value()
+
+      return _(Messages.Types).invert().mapValues(() => 0).assign(counts).value()
     }
 
     function outgoingMessage(message){
-      stats.outgoingMessages++
       if(message.type === Messages.Types.Batch){
+        stats.outgoingMessages++
         const messagesTypeCounts = countsByMessageType(message.rpcMessages)
 
-        stats.outgoingCalls += messagesTypeCounts[Messages.Types.Call]
-        stats.outgoingReturns += messagesByType[Messages.Types.Return]
-        stats.outgoingErrors += messagesByType[Messages.Types.Error]
-        stats.outgoingProxyPropertyUpdates += messagesByType[Messages.Types.ProxyPropertyUpdate]
-        stats.outgoingStubPropertyUpdate += messagesByType[Messages.Types.StubPropertyUpdate]
+        stats.outgoingApiCalls += messagesTypeCounts[Messages.Types.ApiCall]
+        stats.outgoingFunctionCalls += messagesTypeCounts[Messages.Types.FunctionCall]
+        stats.outgoingReturns += messagesTypeCounts[Messages.Types.Return]
+        stats.outgoingErrors += messagesTypeCounts[Messages.Types.Error]
+        stats.outgoingProxyPropertyUpdates += messagesTypeCounts[Messages.Types.ProxyPropertyUpdate]
+        stats.outgoingStubPropertyUpdate += messagesTypeCounts[Messages.Types.StubPropertyUpdate]
       }
     }
 
     function incomingMessage(message){
-      stats.incomingMessages++
       if(message.type === Messages.Types.Batch){
+        stats.incomingMessages++
         const messagesTypeCounts = countsByMessageType(message.rpcMessages)
 
-        stats.incomingCalls += messagesTypeCounts[Messages.Types.Call]
-        stats.incomingReturns += messagesByType[Messages.Types.Return]
-        stats.incomingErrors += messagesByType[Messages.Types.Error]
-        stats.incomingProxyPropertyUpdates += messagesByType[Messages.Types.ProxyPropertyUpdate]
-        stats.incomingStubPropertyUpdate += messagesByType[Messages.Types.StubPropertyUpdate]
+        stats.incomingApiCalls += messagesTypeCounts[Messages.Types.ApiCall]
+        stats.incomingFunctionCalls += messagesTypeCounts[Messages.Types.FunctionCall]
+        stats.incomingReturns += messagesTypeCounts[Messages.Types.Return]
+        stats.incomingErrors += messagesTypeCounts[Messages.Types.Error]
+        stats.incomingProxyPropertyUpdates += messagesTypeCounts[Messages.Types.ProxyPropertyUpdate]
+        stats.incomingStubPropertyUpdate += messagesTypeCounts[Messages.Types.StubPropertyUpdate]
       }
+    }
+
+    function serializeStart(){
+      stats.serializations.push(Date.now())
+    }
+
+    function serializeEnd(){
+      stats.serializations[stats.serializations.length - 1] = Date.now() - stats.serializations[stats.serializations.length - 1]
+    }
+
+    function deserializeStart(){
+      stats.deserializations.push(Date.now())
+    }
+
+    function deserializeEnd(){
+      stats.deserializations[stats.deserializations.length - 1] = Date.now() - stats.deserializations[stats.deserializations.length - 1]
+    }
+
+    function bufferAllocation(size, available){
+      stats.buffers.push({size, available})
     }
 
     function getStats() {
@@ -282,7 +318,68 @@ define([
       return stats
     }
 
-    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage, stats: getStats, clear: init}
+    const percent = n => `${Math.floor(n * 10000) / 100}%`
+    // const percent = n => n
+
+    function log(){
+      console.log(name)
+      console.groupCollapsed('Messages')
+      console.log(`Outgoing: ${stats.outgoingMessages}`)
+      console.log(`Incoming: ${stats.incomingMessages}`)
+
+      console.groupCollapsed('API calls')
+      console.log(`Outgoing: ${stats.outgoingApiCalls}`)
+      console.log(`Incoming: ${stats.incomingApiCalls}`)
+      console.groupEnd()
+      console.groupCollapsed('Function calls')
+      console.log(`Outgoing: ${stats.outgoingFunctionCalls}`)
+      console.log(`Incoming: ${stats.incomingFunctionCalls}`)
+      console.groupEnd()
+      console.groupCollapsed('Returns')
+      console.log(`Outgoing: ${stats.outgoingReturns}`)
+      console.log(`Incoming: ${stats.incomingReturns}`)
+      console.groupEnd()
+      console.groupCollapsed('Errors')
+      console.log(`Outgoing: ${stats.outgoingErrors}`)
+      console.log(`Incoming: ${stats.incomingErrors}`)
+      console.groupEnd()
+      console.groupCollapsed('Proxy Property Updates')
+      console.log(`Outgoing: ${stats.outgoingProxyPropertyUpdates}`)
+      console.log(`Incoming: ${stats.incomingProxyPropertyUpdates}`)
+      console.groupEnd()
+      console.groupCollapsed('Stub Property Updates')
+      console.log(`Outgoing: ${stats.outgoingStubPropertyUpdate}`)
+      console.log(`Incoming: ${stats.incomingStubPropertyUpdate}`)
+      console.groupEnd()
+
+      console.groupEnd()
+
+      console.groupCollapsed('Queue')
+      console.log(`${stats.queuedMessages} messages queued`)
+      console.log(`${stats.queueDrains} messages drained`)
+      console.groupEnd()
+
+      console.groupCollapsed('Buffers')
+      console.log(`${stats.buffers.length} buffers allocated`)
+      console.log(`Average buffer size: ${_.sumBy(stats.buffers, 'size') / stats.buffers.length}`)
+      console.log(`Average buffer utilization: ${percent(_.sumBy(stats.buffers, buf => (buf.size - buf.available) / buf.size) / stats.buffers.length)}`)
+      console.groupCollapsed('Details')
+      _.forEach(stats.buffers, buffer => {
+        console.log(`Size: ${buffer.size}, Available: ${buffer.available}, Utilization: ${percent((buffer.size - buffer.available) / buffer.size)}`)
+      })
+      console.groupEnd()
+      console.groupEnd()
+
+      console.groupCollapsed('Serializations')
+      console.log(`Serializations: ${stats.serializations.length}`)
+      console.log(`Average serialization time: ${_.sum(stats.serializations) / stats.serializations.length} ms`)
+      console.log(`Deserializations: ${stats.deserializations.length}`)
+      console.log(`Average deserialization time: ${_.sum(stats.deserializations) / stats.deserializations.length} ms`)
+      console.groupEnd()
+    }
+
+    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage,
+      serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation, log, stats: getStats, clear: init}
   }
 
   function ConsoleWithStatsMonitor(name, delay){

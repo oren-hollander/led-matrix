@@ -22,7 +22,7 @@ define([
   JsonSerializer,
   BinarySerializer,
   {Serializable},
-  {ConsoleMonitor},
+  {ConsoleMonitor, StatsMonitor},
   ImageSerializer
 ) => {
   describe('MessageRPC', () =>  {
@@ -127,10 +127,10 @@ define([
       it('using native serializer', done => {
         const worker = new Worker('/src/test/message-rpc.specs.native.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), NativeSerializer).then(({api}) => {
-          console.time('image')
+          console.time('native')
           return api.imageSize(megaPixelImage)
         }).then(s => {
-          console.timeEnd('image')
+          console.timeEnd('native')
           expect(s).toBe(megaPixelImage.length)
           done()
         })
@@ -139,25 +139,27 @@ define([
       it('using json serializer', done => {
         const worker = new Worker('/src/test/message-rpc.specs.json.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), JsonSerializer).then(({api}) => {
-          console.time('image')
+          console.time('json')
           return api.imageSize(megaPixelImage)
         }).then(s => {
-          console.timeEnd('image')
+          console.timeEnd('json')
           expect(s).toBe(megaPixelImage.length)
           done()
         })
       })
 
-      it('using binary serializer', done => {
+      fit('using binary serializer', done => {
         const worker = new Worker('/src/test/message-rpc.specs.binary.worker.js')
 
-        MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}), ConsoleMonitor('Image')).then(({api}) => {
-          console.time('image')
+        var statsMonitor = StatsMonitor('Stats');
+        MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor).then(({api}) => {
+          console.time('binary')
           megaPixelImage[Serializable] = 'Image'
           return api.imageSize(megaPixelImage)
         }).then(s => {
-          console.timeEnd('image')
+          console.timeEnd('binary')
           expect(s).toBe(megaPixelImage.length)
+          statsMonitor.log()
           done()
         })
       })
