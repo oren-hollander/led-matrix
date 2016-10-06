@@ -4,12 +4,14 @@ define([
   'lodash',
   'rpc/priority',
   'util/promise',
-  'util/id-gen'
+  'util/id-gen',
+  'rpc/api-util'
 ], (
   _,
   {CallPriority, ReturnPriority,  MessagePriorities},
   {createPromiseWithSettler},
-  IdGenerator
+  IdGenerator,
+  {SharedObjectSymbol}
 ) => {
 
   const defaultPriorities = {
@@ -35,10 +37,16 @@ define([
         get: () => value,
         set: newValue => {
           value = newValue
-          updateProperty(ref, name, newValue, properties[CallPriority])
+          if(properties[SharedObjectSymbol].connected)
+            updateProperty(ref, name, newValue, properties[CallPriority])
         },
       })
     })
+
+    properties[SharedObjectSymbol] = {
+      ref,
+      connected: false
+    }
 
     properties[CallPriority] = MessagePriorities.Immediate
     return {proxy: properties, setters: nonTriggeringSetters}

@@ -37,11 +37,6 @@ define([
 
       const proxyWithSetters = SharedObjectProxy(prototype, ref, updateProperty)
 
-      proxyWithSetters.proxy[SharedObjectSymbol] = {
-        ref,
-        connected: false
-      }
-
       stubs.add(proxyWithSetters, ref)
       return proxyWithSetters.proxy
     }
@@ -91,6 +86,8 @@ define([
           return ApiProxy(value.functionNames, value.ref, handleOutgoingApiCall)
         case Messages.Types.SharedObject:
           const proxyWithSetters = SharedObjectProxy(value.properties, value.ref, handleOutgoingStubPropertyUpdate)
+          proxyWithSetters.proxy[SharedObjectSymbol].connected = true
+
           proxies.add(proxyWithSetters, value.ref)
           return proxyWithSetters.proxy
         default:

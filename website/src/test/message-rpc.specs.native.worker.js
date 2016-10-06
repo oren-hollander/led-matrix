@@ -1,9 +1,9 @@
 'use strict'
 
-importScripts('/src/lib/require.js')
+importScripts('../lib/require.js')
 
 requirejs.config({
-  baseUrl: '/src',
+  baseUrl: '../',
   paths: {
     'lodash': ['lib/lodash']
   }

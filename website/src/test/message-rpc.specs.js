@@ -125,7 +125,7 @@ define([
       }
 
       it('using native serializer', done => {
-        const worker = new Worker('/src/test/message-rpc.specs.native.worker.js')
+        const worker = new Worker('src/test/message-rpc.specs.native.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), NativeSerializer).then(({api}) => {
           console.time('native')
           return api.imageSize(megaPixelImage)
@@ -137,7 +137,7 @@ define([
       })
 
       it('using json serializer', done => {
-        const worker = new Worker('/src/test/message-rpc.specs.json.worker.js')
+        const worker = new Worker('src/test/message-rpc.specs.json.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), JsonSerializer).then(({api}) => {
           console.time('json')
           return api.imageSize(megaPixelImage)
@@ -148,8 +148,8 @@ define([
         })
       })
 
-      fit('using binary serializer', done => {
-        const worker = new Worker('/src/test/message-rpc.specs.binary.worker.js')
+      it('using binary serializer', done => {
+        const worker = new Worker('src/test/message-rpc.specs.binary.worker.js')
 
         var statsMonitor = StatsMonitor('Stats');
         MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor).then(({api}) => {
