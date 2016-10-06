@@ -21,13 +21,15 @@ requirejs([
   'rpc/message-rpc',
   'rpc/remote',
   'rpc/messenger',
-  'rpc/monitor'
+  'rpc/monitor',
+  'serialization/json-serializer'
 ], (
   _,
   MessageRpc,
   {RemoteApi},
   {WebSocketMessenger},
-  {ConsoleMonitor}
+  {ConsoleMonitor},
+  Serializer
 ) => {
 
   //////////////////////////////////////
@@ -137,7 +139,7 @@ requirejs([
   }
 
   function createRpcChannel(socket){
-    MessageRpc(RemoteApi(serverApi), WebSocketMessenger(socket), ConsoleMonitor('server')).then(({api: device}) => {
+    MessageRpc(RemoteApi(serverApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('server')).then(({api: device}) => {
       // if(stationApi && padApis.length === 2){
       //   console.log('Resetting connections')
       //   stationApi = undefined

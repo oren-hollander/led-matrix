@@ -9,7 +9,10 @@ define([
   'serialization/native-serializer',
   'serialization/json-serializer',
   'serialization/binary-serializer',
-  'serialization/serialize'
+  'serialization/serialize',
+  'rpc/monitor',
+  'rpc/priority',
+  'rpc/message-rpc.specs.image-serializer'
 ], (
   _,
   MessageRPC,
@@ -19,7 +22,10 @@ define([
   NativeSerializer,
   JsonSerializer,
   BinarySerializer,
-  {Serializable}
+  {Serializable},
+  {ConsoleMonitor},
+  {MessagePriorities, setPriority},
+  ImageSerializer
 ) => {
   describe('MessageRPC', () =>  {
 
@@ -28,6 +34,28 @@ define([
     beforeEach(() => {
       [messenger1, messenger2] = MockMessengers()
     })
+
+    // it('monitor', done => {
+    //
+    //   const api = {
+    //     add: (a, b) => a + b
+    //   }
+    //
+    //   MessageRPC(RemoteApi(api), messenger1, NativeSerializer)
+    //
+    //   MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('Test')).then(({api}) => {
+    //     setPriority(api, MessagePriorities.Immediate)
+    //
+    //     Promise.all([
+    //       api.add(3, 4),
+    //       api.add(4, 5)
+    //     ])
+    //     .then(() => {
+    //       expect(true).toBe(true)
+    //       done()
+    //     })
+    //   })
+    // })
 
     it('should connect and expose remote API', done => {
 
@@ -92,9 +120,9 @@ define([
         }
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
+      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer, ConsoleMonitor('Side A'))
 
-      MessageRPC({}, messenger2, NativeSerializer).then(({api, createSharedObject}) => {
+      MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('Side B')).then(({api, createSharedObject}) => {
         const sharedObject = createSharedObject({x: 10, y: 20})
         api.passSharedObject(sharedObject)
 
@@ -116,8 +144,8 @@ define([
       const platformApi = {
         passSharedObject: sharedObject => {
           const so = SharedObjectProxy(sharedObject)
-          so.x = so.x + 1
-          so.y = so.y + 1
+          so.x++
+          so.y++
         }
       }
 
@@ -177,9 +205,10 @@ define([
 
       it('using binary serializer', done => {
         const worker = new Worker('/src/rpc/message-rpc.specs.binary.worker.js')
-        MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer).then(({api}) => {
+
+        MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}), ConsoleMonitor('Image')).then(({api}) => {
           console.time('image')
-          megaPixelImage[Serializable] = true
+          megaPixelImage[Serializable] = 'Image'
           return api.imageSize(megaPixelImage)
         }).then(s => {
           console.timeEnd('image')

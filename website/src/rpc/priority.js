@@ -15,8 +15,8 @@ define([
     None: -2,
     Immediate: -1,
     High: 0,
-    Medium: 1000/16,
-    Low: 100
+    Animation: 1000 / 60,
+    Low: 50
   }
 
   const setPriority = (functionOrApi, callPriority, returnPriority = callPriority) => {

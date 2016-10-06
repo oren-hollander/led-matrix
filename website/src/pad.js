@@ -14,15 +14,17 @@ require([
   'rpc/remote',
   'rpc/messenger',
   'rpc/monitor',
-  'geometry/geometry'
+  'geometry/geometry',
+  'serialization/json-serializer'
 ], (
   _,
   {FullScreenCanvas},
   MessageRPC,
   {RemoteApi},
-  {WebWorkerMessenger, WebSocketMessenger},
+  {WebSocketMessenger},
   {ConsoleMonitor},
-  {pointInCircle}
+  {pointInCircle},
+  Serializer
 ) => {
 
   const canvasWidth = 2400
@@ -54,7 +56,7 @@ require([
     }
 
     socket.onopen = () => {
-      MessageRPC(RemoteApi(padServerApi), WebSocketMessenger(socket), ConsoleMonitor('pad socket')).then(({api}) => {
+      MessageRPC(RemoteApi(padServerApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('pad socket')).then(({api}) => {
         serverApi = api
       })
     }

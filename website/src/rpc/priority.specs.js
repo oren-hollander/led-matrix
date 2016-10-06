@@ -5,7 +5,7 @@ define([
   'rpc/priority'
 ], (
   _,
-  {CallPriority, ReturnPriority, MessagePriorities: {Immediate, High, Low, Medium}, withPriority}
+  {CallPriority, ReturnPriority, MessagePriorities: {Immediate, High, Low, Animation}, withPriority}
 ) => {
 
   describe("defineApi", function() {
@@ -33,8 +33,8 @@ define([
 
       withPriority(api).Call(High).Return(Low).Do(api => {
         expect(api.f1()).toEqual([High, Low, undefined, undefined])
-        withPriority(api.f2).Call(Medium).Do(f2 => {
-          expect(f2()).toEqual([High, Low, Medium, undefined])
+        withPriority(api.f2).Call(Animation).Do(f2 => {
+          expect(f2()).toEqual([High, Low, Animation, undefined])
         })
       })
 

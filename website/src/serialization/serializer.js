@@ -110,7 +110,7 @@ define([
   const Priorities = Enum([
     MessagePriorities.Immediate,
     MessagePriorities.High,
-    MessagePriorities.Medium,
+    MessagePriorities.Animation,
     MessagePriorities.Low,
     MessagePriorities.None
   ])

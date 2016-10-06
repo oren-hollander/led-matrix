@@ -34,23 +34,23 @@ define([
   const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
 
   const rpcValue = value => ({type: MessageTypes.Value, value})
-  const rpcApi = (stub, functionNames) => ({type: MessageTypes.Api, functionNames, stub})
-  const rpcFunction = stub => ({type: MessageTypes.Function, stub})
-  const rpcSharedObject = (stub, properties) => ({type: MessageTypes.SharedObject, properties, stub})
+  const rpcApi = (ref, functionNames) => ({type: MessageTypes.Api, functionNames, ref})
+  const rpcFunction = ref => ({type: MessageTypes.Function, ref})
+  const rpcSharedObject = (ref, properties) => ({type: MessageTypes.SharedObject, properties, ref})
 
-  const rpcApiCall = (id, stub, func, args, returnPriority) =>
-    rpcMessage(MessageTypes.ApiCall, {id, stub, func, args, returnPriority})
-  const rpcFunctionCall = (id, stub, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, stub, args, returnPriority})
-  const rpcReturn = (id, stub, value, callTimestamp) => debug
-    ? rpcMessage(MessageTypes.Return, {id, stub, value, callTimestamp})
-    : rpcMessage(MessageTypes.Return, {id, stub, value})
+  const rpcApiCall = (id, ref, func, args, returnPriority) =>
+    rpcMessage(MessageTypes.ApiCall, {id, ref, func, args, returnPriority})
+  const rpcFunctionCall = (id, ref, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, ref, args, returnPriority})
+  const rpcReturn = (id, ref, value, callTimestamp) => debug
+    ? rpcMessage(MessageTypes.Return, {id, ref, value, callTimestamp})
+    : rpcMessage(MessageTypes.Return, {id, ref, value})
 
-  const rpcError = (id, stub, error, callTimestamp) => debug
-    ? rpcMessage(MessageTypes.Error, {id, stub, error, callTimestamp})
-    : rpcMessage(MessageTypes.Error, {id, stub, error})
+  const rpcError = (id, ref, error, callTimestamp) => debug
+    ? rpcMessage(MessageTypes.Error, {id, ref, error, callTimestamp})
+    : rpcMessage(MessageTypes.Error, {id, ref, error})
 
-  const rpcStubPropertyUpdate = (stub, prop, value) => rpcMessage(MessageTypes.StubPropertyUpdate, {stub, prop, value})
-  const rpcProxyPropertyUpdate = (stub, prop, value) => rpcMessage(MessageTypes.ProxyPropertyUpdate, {stub, prop, value})
+  const rpcStubPropertyUpdate = (ref, prop, value) => rpcMessage(MessageTypes.StubPropertyUpdate, {ref, prop, value})
+  const rpcProxyPropertyUpdate = (ref, prop, value) => rpcMessage(MessageTypes.ProxyPropertyUpdate, {ref, prop, value})
 
   const isApiCall = rpcMessage => rpcMessage.type === MessageTypes.ApiCall
   const isFunctionCall = rpcMessage => rpcMessage.type === MessageTypes.FunctionCall

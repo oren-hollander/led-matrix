@@ -125,7 +125,7 @@ require([
     }
   }
 
-  MessageRPC(RemoteApi(breakout), WebWorkerMessenger(self)).then(({api}) => {
+  MessageRPC(RemoteApi(breakout), WebWorkerMessenger(self), Serializer).then(({api}) => {
     // station = setPriority(api, MessagePriorities.High, MessagePriorities.None)
     station = setPriority(api, MessagePriorities.High)
   })

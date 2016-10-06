@@ -36,8 +36,8 @@ define([
         })
       },
       setReceiver: callback => {
-        socket.onmessage = ({data}) => {
-          callback(data)
+        socket.onmessage = message => {
+          callback(message.data)
         }
       }
     }

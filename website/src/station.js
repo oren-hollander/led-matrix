@@ -14,7 +14,8 @@ require([
   'rpc/messenger',
   'rpc/monitor',
   'canvas/canvas',
-  'util/promise'
+  'util/promise',
+  'serialization/json-serializer'
 ], (
   _,
   MessageRPC,
@@ -22,7 +23,8 @@ require([
   {WebWorkerMessenger, WebSocketMessenger},
   {ConsoleMonitor},
   {FullScreenCanvas},
-  {createPromiseWithSettler}
+  {createPromiseWithSettler},
+  Serializer
 ) => {
 
   let stationDeviceId
@@ -58,7 +60,7 @@ require([
     }
 
     socket.onopen = () => {
-      MessageRPC(RemoteApi(stationServerApi), WebSocketMessenger(socket), ConsoleMonitor('station socket'))
+      MessageRPC(RemoteApi(stationServerApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('station socket'))
     }
   }
 
@@ -97,7 +99,7 @@ require([
   }
 
   function startGame(){
-    MessageRPC(RemoteApi(stationApi), WebWorkerMessenger(new Worker('/src/breakout/breakout.js'))).then(({api}) => {
+    MessageRPC(RemoteApi(stationApi), WebWorkerMessenger(new Worker('/src/breakout/breakout.js')), Serializer).then(({api}) => {
       breakoutApi = api
 
       padResolvers[0](breakoutApi.connectPad(pads[0]))

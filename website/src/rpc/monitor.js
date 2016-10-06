@@ -2,10 +2,12 @@
 
 define([
   'lodash',
-  'rpc/messages'
+  'rpc/messages',
+  'serialization/serialize'
 ], (
   _,
-  Messages
+  Messages,
+  {Serializable}
 ) => {
 
   function ConsoleMonitor(name){
@@ -39,8 +41,22 @@ define([
 
     const prefix = messageType => `${now()} ${name}: ${messageType}`
 
-    const batchLabel = (direction, rpcMessages) => {
-      return `${direction} Batch ~ ${rpcLabels(rpcMessages)}`
+    const batchLabel = (direction, rpcMessages) => `${direction} Batch ~ ${rpcLabels(rpcMessages)}`
+    const priorityLabel = priority => {
+      switch(priority){
+        case -2:
+          return 'None'
+        case -1:
+          return 'Immediate'
+        case 0:
+          return 'High'
+        case 1000 / 60:
+          return 'Animation'
+        case 50:
+          return 'Low'
+        default:
+          return `Custom (${priority})`
+      }
     }
 
     const rpcLabels = rpcMessages => {
@@ -52,12 +68,9 @@ define([
       return `[${rpcMessages.length > 3 ? `${firstThree}, ...` : firstThree}]`
     }
 
-    const rpcLabel = rpcMessage => {
-      if(rpcMessage.id !== undefined)
-        return `${rpcMessage.type} <${rpcMessage.stub}:${rpcMessage.id}>`
-      else
-        return `${rpcMessage.type} <${rpcMessage.stub}>`
-    }
+    const refIdLabel = (ref, id) => id ? `<${ref}|${id}>` : `<${ref}>`
+
+    const rpcLabel = rpcMessage => `${rpcMessage.type} ${refIdLabel(rpcMessage.ref, rpcMessage.id)}`
 
     const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
@@ -75,7 +88,7 @@ define([
       [Messages.Types.ApiCall]: message => {
         console.groupCollapsed(`${rpcLabel(message)} ${message.func}`)
         console.log(`ID: ${message.id}`)
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         console.log(`Function: ${message.func}`)
         if(message.args.length > 0){
           console.groupCollapsed(`Arguments`)
@@ -85,13 +98,13 @@ define([
         else{
           console.log(`No arguments`)
         }
-        console.log(`Return priority: ${message.returnPriority}`)
+        console.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
         console.groupEnd()
       },
       [Messages.Types.FunctionCall]: message => {
         console.groupCollapsed(`${rpcLabel(message)}`)
         console.log(`ID: ${message.id}`)
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         if(message.args.length > 0){
           console.groupCollapsed(`Arguments`)
           _.forEach(message.args, log)
@@ -100,13 +113,13 @@ define([
         else{
           console.log(`No arguments`)
         }
-        console.log(`Return priority: ${message.returnPriority}`)
+        console.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
         console.groupEnd()
       },
       [Messages.Types.Return]: message => {
         console.groupCollapsed(rpcLabel(message))
         console.log(`ID: ${message.id}`)
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         log(message.value)
         if(message.callTimestamp)
           console.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
@@ -115,7 +128,7 @@ define([
       [Messages.Types.Error]: message => {
         console.groupCollapsed(rpcLabel(message))
         console.log(`ID: ${message.id}`)
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         console.log(`Error: ${message.error}`)
         if(message.callTimestamp)
           console.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
@@ -123,14 +136,14 @@ define([
       },
       [Messages.Types.ProxyPropertyUpdate]: message => {
         console.groupCollapsed(rpcLabel(message))
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         console.log(`Property: ${message.prop}`)
         console.log(`Value: ${message.value}`)
         console.groupEnd()
       },
       [Messages.Types.StubPropertyUpdate]: message => {
         console.groupCollapsed(rpcLabel(message))
-        console.log(`Stub: ${message.stub}`)
+        console.log(`Ref: ${message.ref}`)
         console.log(`Property: ${message.prop}`)
         console.log(`Value: ${message.value}`)
         console.groupEnd()
@@ -138,12 +151,14 @@ define([
       [Messages.Types.Value]: message => {
         if(message.value === undefined)
           console.log('No value')
+        else if(message.value[Serializable])
+          console.log(`Value serialized with '${message.value[Serializable]}' serializer`)
         else
           console.log(`Value: ${message.value}`)
       },
       [Messages.Types.Api]: message => {
-        console.groupCollapsed(`Api: ${message.stub}`)
-        console.log(`Stub: ${message.stub}`)
+        console.groupCollapsed(`Api: ${refIdLabel(message.ref)}`)
+        console.log(`Ref: ${message.ref}`)
 
         if(message.functionNames.length > 0){
           console.log(`Functions: ${message.functionNames.join()}`)
@@ -152,23 +167,16 @@ define([
           console.log('No functions')
         }
 
-        if(_.size(message.properties) > 0){
-          console.log(`Properties: ${JSON.stringify(message.properties)}`)
-        }
-        else {
-          console.log('No properties')
-        }
-
         console.groupEnd()
       },
       [Messages.Types.Function]: message => {
-        console.groupCollapsed(`Function: ${message.stub}`)
-        console.log(`Stub: ${message.stub}`)
+        console.groupCollapsed(`Function: ${refIdLabel(message.ref)}`)
+        console.log(`Ref: ${message.ref}`)
         console.groupEnd()
       },
       [Messages.Types.SharedObject]: message => {
-        console.groupCollapsed(`Shared Object: ${message.stub}`)
-        console.log(`Stub: ${message.stub}`)
+        console.groupCollapsed(`Shared Object: ${refIdLabel(message.ref)}`)
+        console.log(`Ref: ${message.ref}`)
         console.log(`Properties: ${JSON.stringify(message.properties)}`)
         console.groupEnd()
       }

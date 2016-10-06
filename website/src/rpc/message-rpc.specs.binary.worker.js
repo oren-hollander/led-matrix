@@ -14,13 +14,15 @@ require([
   'rpc/message-rpc',
   'rpc/remote',
   'rpc/messenger',
-  'serialization/binary-serializer'
+  'serialization/binary-serializer',
+  'rpc/message-rpc.specs.image-serializer'
 ], (
   _,
   MessageRPC,
   {RemoteApi},
   {WebWorkerMessenger},
-  BinarySerializer
+  BinarySerializer,
+  ImageSerializer
 ) => {
 
   const api = {
@@ -29,5 +31,5 @@ require([
     }
   }
 
-  MessageRPC(RemoteApi(api), WebWorkerMessenger(self), BinarySerializer)
+  MessageRPC(RemoteApi(api), WebWorkerMessenger(self), BinarySerializer({Image: ImageSerializer}))
 })

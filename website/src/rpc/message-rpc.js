@@ -32,26 +32,26 @@ define([
     sendMessage(Messages.init(Object.keys(localApi)))
 
     const createSharedObject = (prototype, updateProperty) => {
-      const stub = stubs.reserveRefId()
+      const ref = stubs.reserveRefId()
       const sharedObject = _(prototype)
         .mapValues((value, name) => ({
           [PropertySymbol]: name,
           set: (newValue, triggerUpdate = true) => {
             value = newValue
             if(triggerUpdate && sharedObject[SharedObjectSymbol].connected)
-              updateProperty(stub, name, value, sharedObject[CallPriority])
+              updateProperty(ref, name, value, sharedObject[CallPriority])
           },
           get: () => value,
         }))
         .value()
 
       sharedObject[SharedObjectSymbol] = {
-        stub,
+        ref,
         connected: false
       }
       sharedObject[CallPriority] = MessagePriorities.Immediate
 
-        stubs.add(sharedObject, stub)
+      stubs.add(sharedObject, ref)
       return sharedObject
     }
 
@@ -74,17 +74,17 @@ define([
     // todo: consider how to treat the same proxy added multiple times
     function processOutgoingRpcValue(value) {
       if(value && value[ApiSymbol]){
-        const stub = stubs.add(value)
-        return Messages.rpcApi(stub, _.keys(value))
+        const ref = stubs.add(value)
+        return Messages.rpcApi(ref, _.keys(value))
       }
       else if(value && value[FunctionSymbol]) {
-        const stub = stubs.add(value)
-        return Messages.rpcFunction(stub)
+        const ref = stubs.add(value)
+        return Messages.rpcFunction(ref)
       }
       else if(value && value[SharedObjectSymbol]) {
         const properties = _.mapValues(value, v => v.get())
         value[SharedObjectSymbol].connected = true
-        return Messages.rpcSharedObject(value[SharedObjectSymbol].stub, properties)
+        return Messages.rpcSharedObject(value[SharedObjectSymbol].ref, properties)
       }
       else {
         return Messages.rpcValue(value)
@@ -96,12 +96,12 @@ define([
         case Messages.Types.Value:
           return value.value
         case Messages.Types.Function:
-          return FunctionProxy(value.stub, handleOutgoingFunctionCall)
+          return FunctionProxy(value.ref, handleOutgoingFunctionCall)
         case Messages.Types.Api:
-          return ApiProxy(value.functionNames, value.stub, handleOutgoingApiCall)
+          return ApiProxy(value.functionNames, value.ref, handleOutgoingApiCall)
         case Messages.Types.SharedObject:
-          const proxy = SharedObjectProxy(value.properties, value.stub, handleOutgoingStubPropertyUpdate)
-          proxies.add(proxy, value.stub)
+          const proxy = SharedObjectProxy(value.properties, value.ref, handleOutgoingStubPropertyUpdate)
+          proxies.add(proxy, value.ref)
           return proxy
         default:
           throw `Unknown type: ${value.type}`
@@ -119,65 +119,65 @@ define([
       }
     }
 
-    function handleOutgoingApiCall(id, stub, func, args, callPriority, returnPriority, settler) {
+    function handleOutgoingApiCall(id, ref, func, args, callPriority, returnPriority, settler) {
       if(returnPriority === MessagePriorities.None)
         settler.resolve()
       else
         settlers.set(id, settler)
 
-      const rpcMessage = Messages.rpcApiCall(id, stub, func, _.map(args, processOutgoingRpcValue), returnPriority)
+      const rpcMessage = Messages.rpcApiCall(id, ref, func, _.map(args, processOutgoingRpcValue), returnPriority)
 
       sendMessageByPriority(rpcMessage, callPriority)
     }
 
-    function handleOutgoingFunctionCall(id, stub, args, callPriority, returnPriority, settler) {
+    function handleOutgoingFunctionCall(id, ref, args, callPriority, returnPriority, settler) {
       if(returnPriority === MessagePriorities.None)
         settler.resolve()
       else
         settlers.set(id, settler)
 
-      const rpcMessage = Messages.rpcFunctionCall(id, stub, args.map(processOutgoingRpcValue), returnPriority)
+      const rpcMessage = Messages.rpcFunctionCall(id, ref, args.map(processOutgoingRpcValue), returnPriority)
 
       sendMessageByPriority(rpcMessage, callPriority)
     }
 
-    function handleOutgoingProxyPropertyUpdate(stub, prop, value, priority) {
-      sendMessageByPriority(Messages.rpcProxyPropertyUpdate(stub, prop, value), priority)
+    function handleOutgoingProxyPropertyUpdate(ref, prop, value, priority) {
+      sendMessageByPriority(Messages.rpcProxyPropertyUpdate(ref, prop, value), priority)
     }
 
-    function handleOutgoingStubPropertyUpdate(stub, prop, value, priority) {
-      sendMessageByPriority(Messages.rpcStubPropertyUpdate(stub, prop, value), priority)
+    function handleOutgoingStubPropertyUpdate(ref, prop, value, priority) {
+      sendMessageByPriority(Messages.rpcStubPropertyUpdate(ref, prop, value), priority)
     }
 
-    function handleOutgoingReturn(result, id, stub, returnPriority, callTimestamp) {
-      let rpcMessage = Messages.rpcReturn(id, stub, processOutgoingRpcValue(result), callTimestamp)
+    function handleOutgoingReturn(result, id, ref, returnPriority, callTimestamp) {
+      let rpcMessage = Messages.rpcReturn(id, ref, processOutgoingRpcValue(result), callTimestamp)
       sendMessageByPriority(rpcMessage, returnPriority)
     }
 
-    function handleOutgoingError(error, id, stub, returnPriority, callTimestamp) {
-      const rpcMessage = Messages.rpcError(id, stub, error.toString(), callTimestamp)
+    function handleOutgoingError(error, id, ref, returnPriority, callTimestamp) {
+      const rpcMessage = Messages.rpcError(id, ref, error.toString(), callTimestamp)
       sendMessageByPriority(rpcMessage, returnPriority)
     }
 
-    function handleIncomingApiCall({id, stub, func, args, returnPriority, ts}) {
-      const promise = stubs.get(stub)[func](... args.map(processIncomingRpcValue))
+    function handleIncomingApiCall({id, ref, func, args, returnPriority, ts}) {
+      const promise = stubs.get(ref)[func](... args.map(processIncomingRpcValue))
       if(returnPriority !== MessagePriorities.None) {
         promise.then(result => {
-          handleOutgoingReturn(result, id, stub, returnPriority, ts)
+          handleOutgoingReturn(result, id, ref, returnPriority, ts)
         })
         .catch(error => {
-          handleOutgoingError(error, id, stub, returnPriority, ts)
+          handleOutgoingError(error, id, ref, returnPriority, ts)
         })
       }
     }
 
-    function handleIncomingFunctionCall({id, stub, args, returnPriority, ts}) {
-      stubs.get(stub)(... args.map(processIncomingRpcValue))
+    function handleIncomingFunctionCall({id, ref, args, returnPriority, ts}) {
+      stubs.get(ref)(... args.map(processIncomingRpcValue))
         .then(result => {
-          handleOutgoingReturn(result, id, stub, returnPriority, ts)
+          handleOutgoingReturn(result, id, ref, returnPriority, ts)
         })
         .catch(error => {
-          handleOutgoingError(error, id, stub, returnPriority, ts)
+          handleOutgoingError(error, id, ref, returnPriority, ts)
         })
     }
 
@@ -193,12 +193,12 @@ define([
       settler.reject(error)
     }
 
-    function handleIncomingProxyPropertyUpdate({stub, prop, value}){
-      stubs.get(stub)[prop].set(value, false)
+    function handleIncomingProxyPropertyUpdate({ref, prop, value}){
+      stubs.get(ref)[prop].set(value, false)
     }
 
-    function handleIncomingStubPropertyUpdate({stub, prop, value}){
-      proxies.get(stub)[prop].set(value, false)
+    function handleIncomingStubPropertyUpdate({ref, prop, value}){
+      proxies.get(ref)[prop].set(value, false)
     }
 
     function onBatch(rpcMessage) {

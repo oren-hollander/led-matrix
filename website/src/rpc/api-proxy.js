@@ -20,10 +20,10 @@ define([
 
   const callIdGenerator = IdGenerator()
 
-  function SharedObjectProxy(properties, stub, updateProperty) {
+  function SharedObjectProxy(properties, ref, updateProperty) {
     const proxy = _.mapValues(properties, (propertyValue, propertyName) =>
       createProperty(propertyValue, newValue => {
-        updateProperty(stub, propertyName, newValue, proxy[CallPriority])
+        updateProperty(ref, propertyName, newValue, proxy[CallPriority])
       })
     )
 
@@ -31,18 +31,18 @@ define([
     return proxy
   }
 
-  function FunctionProxy(stub, callHandler) {
+  function FunctionProxy(ref, callHandler) {
 
     const f = (...args) => {
       const {promise, resolve, reject} = createPromiseWithSettler()
-      callHandler(callIdGenerator.uniqueId(), stub, args, f[CallPriority], f[ReturnPriority], {resolve, reject})
+      callHandler(callIdGenerator.uniqueId(), ref, args, f[CallPriority], f[ReturnPriority], {resolve, reject})
       return promise
     }
 
     return Object.assign(f, defaultPriorities)
   }
 
-  function ApiProxy(functionNames, stub, callHandler) {
+  function ApiProxy(functionNames, ref, callHandler) {
 
     function getPriority(func, prioritySymbol) {
       if(func[prioritySymbol])
@@ -54,7 +54,7 @@ define([
       .map(functionName => {
         const func = (...args) => {
           const {promise, resolve, reject} = createPromiseWithSettler()
-          callHandler(callIdGenerator.uniqueId(), stub, functionName, args,
+          callHandler(callIdGenerator.uniqueId(), ref, functionName, args,
             getPriority(func, CallPriority), getPriority(func, ReturnPriority), {resolve, reject})
           return promise
         }
