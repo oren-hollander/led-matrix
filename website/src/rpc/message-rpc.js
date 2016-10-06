@@ -13,11 +13,11 @@ define([
   _,
   Queue,
   Messages,
-  {MessagePriorities, CallPriority},
+  {MessagePriorities},
   {ApiProxy, SharedObjectProxy, FunctionProxy},
   {createPromiseWithSettler},
   RefMap,
-  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, PropertySymbol}
+  {ApiSymbol, FunctionSymbol, SharedObjectSymbol}
 ) => {
 
   function MessageRPC(localApi, messenger, serializer, monitor) {
@@ -31,28 +31,19 @@ define([
     const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
     sendMessage(Messages.init(Object.keys(localApi)))
 
+
     const createSharedObject = (prototype, updateProperty) => {
       const ref = stubs.reserveRefId()
-      const sharedObject = _(prototype)
-        .mapValues((value, name) => ({
-          [PropertySymbol]: name,
-          set: (newValue, triggerUpdate = true) => {
-            value = newValue
-            if(triggerUpdate && sharedObject[SharedObjectSymbol].connected)
-              updateProperty(ref, name, value, sharedObject[CallPriority])
-          },
-          get: () => value,
-        }))
-        .value()
 
-      sharedObject[SharedObjectSymbol] = {
+      const proxyWithSetters = SharedObjectProxy(prototype, ref, updateProperty)
+
+      proxyWithSetters.proxy[SharedObjectSymbol] = {
         ref,
         connected: false
       }
-      sharedObject[CallPriority] = MessagePriorities.Immediate
 
-      stubs.add(sharedObject, ref)
-      return sharedObject
+      stubs.add(proxyWithSetters, ref)
+      return proxyWithSetters.proxy
     }
 
     function onInit(remoteApi) {
@@ -82,7 +73,7 @@ define([
         return Messages.rpcFunction(ref)
       }
       else if(value && value[SharedObjectSymbol]) {
-        const properties = _.mapValues(value, v => v.get())
+        const properties = _.mapValues(value, _.identity)
         value[SharedObjectSymbol].connected = true
         return Messages.rpcSharedObject(value[SharedObjectSymbol].ref, properties)
       }
@@ -100,9 +91,9 @@ define([
         case Messages.Types.Api:
           return ApiProxy(value.functionNames, value.ref, handleOutgoingApiCall)
         case Messages.Types.SharedObject:
-          const proxy = SharedObjectProxy(value.properties, value.ref, handleOutgoingStubPropertyUpdate)
-          proxies.add(proxy, value.ref)
-          return proxy
+          const proxyWithSetters = SharedObjectProxy(value.properties, value.ref, handleOutgoingStubPropertyUpdate)
+          proxies.add(proxyWithSetters, value.ref)
+          return proxyWithSetters.proxy
         default:
           throw `Unknown type: ${value.type}`
       }
@@ -194,11 +185,11 @@ define([
     }
 
     function handleIncomingProxyPropertyUpdate({ref, prop, value}){
-      stubs.get(ref)[prop].set(value, false)
+      stubs.get(ref).setters[prop](value)
     }
 
     function handleIncomingStubPropertyUpdate({ref, prop, value}){
-      proxies.get(ref)[prop].set(value, false)
+      proxies.get(ref).setters[prop](value)
     }
 
     function onBatch(rpcMessage) {
@@ -252,8 +243,6 @@ define([
  todo
  ==============
  . support ArrayBuffer passing by ref
- . consider adapting to web sockets
- . proto-buf for proxy functions & properties instead of json
  . revoke / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
  */

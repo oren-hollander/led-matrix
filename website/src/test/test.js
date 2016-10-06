@@ -20,11 +20,11 @@ require.config({
 
 require(['jasmine-boot'], function () {
   require([
-    'util/annotations.specs',
-    'buffer/serial-buffer.specs',
-    'buffer/proto-buf.specs',
-    'rpc/priority.specs',
-    'rpc/message-rpc.specs'
+    'test/annotations.specs',
+    'test/serial-buffer.specs',
+    'test/proto-buf.specs',
+    'test/priority.specs',
+    'test/message-rpc.specs'
   ], function(){
     window.onload();
   })

@@ -1,6 +1,6 @@
 'use strict'
 
-define(['lodash', 'util/annotations'], (_, {Annotations, annotate, getAnnotation, getAnnotations, registerAnnotation}) => {
+define(['lodash', '../util/annotations'], (_, {Annotations, annotate, getAnnotation, getAnnotations, registerAnnotation}) => {
   describe('Annotations', function () {
 
     registerAnnotation('MyAnnotation', Symbol('my-annotation'))

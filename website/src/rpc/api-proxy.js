@@ -4,13 +4,12 @@ define([
   'lodash',
   'rpc/priority',
   'util/promise',
-  'util/id-gen',
-  'util/property'
+  'util/id-gen'
 ], (
   _,
   {CallPriority, ReturnPriority,  MessagePriorities},
   {createPromiseWithSettler},
-  IdGenerator, createProperty
+  IdGenerator
 ) => {
 
   const defaultPriorities = {
@@ -21,14 +20,28 @@ define([
   const callIdGenerator = IdGenerator()
 
   function SharedObjectProxy(properties, ref, updateProperty) {
-    const proxy = _.mapValues(properties, (propertyValue, propertyName) =>
-      createProperty(propertyValue, newValue => {
-        updateProperty(ref, propertyName, newValue, proxy[CallPriority])
-      })
-    )
 
-    proxy[CallPriority] = defaultPriorities[CallPriority]
-    return proxy
+    const nonTriggeringSetters = {}
+
+    _.forEach(properties, (value, name) => {
+
+      nonTriggeringSetters[name] = newValue => {
+        value = newValue
+      }
+
+      Object.defineProperty(properties, name, {
+        enumerable: true,
+        configurable: false,
+        get: () => value,
+        set: newValue => {
+          value = newValue
+          updateProperty(ref, name, newValue, properties[CallPriority])
+        },
+      })
+    })
+
+    properties[CallPriority] = MessagePriorities.Immediate
+    return {proxy: properties, setters: nonTriggeringSetters}
   }
 
   function FunctionProxy(ref, callHandler) {
@@ -66,7 +79,7 @@ define([
     return Object.assign(api, defaultPriorities)
   }
 
-  return {ApiProxy, SharedObjectProxy, FunctionProxy}
+  return {ApiProxy, FunctionProxy, SharedObjectProxy}
 })
 
 

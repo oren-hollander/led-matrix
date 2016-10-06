@@ -11,8 +11,7 @@ define([
   'serialization/binary-serializer',
   'serialization/serialize',
   'rpc/monitor',
-  'rpc/priority',
-  'rpc/message-rpc.specs.image-serializer'
+  'test/message-rpc.specs.image-serializer'
 ], (
   _,
   MessageRPC,
@@ -24,7 +23,6 @@ define([
   BinarySerializer,
   {Serializable},
   {ConsoleMonitor},
-  {MessagePriorities, setPriority},
   ImageSerializer
 ) => {
   describe('MessageRPC', () =>  {
@@ -34,28 +32,6 @@ define([
     beforeEach(() => {
       [messenger1, messenger2] = MockMessengers()
     })
-
-    // it('monitor', done => {
-    //
-    //   const api = {
-    //     add: (a, b) => a + b
-    //   }
-    //
-    //   MessageRPC(RemoteApi(api), messenger1, NativeSerializer)
-    //
-    //   MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('Test')).then(({api}) => {
-    //     setPriority(api, MessagePriorities.Immediate)
-    //
-    //     Promise.all([
-    //       api.add(3, 4),
-    //       api.add(4, 5)
-    //     ])
-    //     .then(() => {
-    //       expect(true).toBe(true)
-    //       done()
-    //     })
-    //   })
-    // })
 
     it('should connect and expose remote API', done => {
 
@@ -112,38 +88,9 @@ define([
       })
     })
 
-    it('should pass a shared object', done => {
-      const platformApi = {
-        passSharedObject: sharedObject => {
-          sharedObject.x.set(sharedObject.x.get() + 1)
-          sharedObject.y.set(sharedObject.y.get() + 1)
-        }
-      }
-
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer, ConsoleMonitor('Side A'))
-
-      MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('Side B')).then(({api, createSharedObject}) => {
-        const sharedObject = createSharedObject({x: 10, y: 20})
-        api.passSharedObject(sharedObject)
-
-        const check = () => {
-          if(sharedObject.x.get() === 10 || sharedObject.y.get() === 20){
-            _.defer(check)
-          }
-          else {
-            expect(sharedObject.x.get()).toBe(11)
-            expect(sharedObject.y.get()).toBe(21)
-            done()
-          }
-        }
-        check()
-      })
-    })
-
     it('Shared Object Proxy', done => {
       const platformApi = {
-        passSharedObject: sharedObject => {
-          const so = SharedObjectProxy(sharedObject)
+        passSharedObject: so => {
           so.x++
           so.y++
         }
@@ -152,10 +99,8 @@ define([
       MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
 
       MessageRPC({}, messenger2, NativeSerializer).then(({api, createSharedObject}) => {
-        const sharedObject = createSharedObject({x: 10, y: 20})
-        api.passSharedObject(sharedObject)
-
-        const so = SharedObjectProxy(sharedObject)
+        const so = createSharedObject({x: 10, y: 20})
+        api.passSharedObject(so)
 
         const check = () => {
           if(so.x === 10 || so.y === 20){
@@ -180,7 +125,7 @@ define([
       }
 
       it('using native serializer', done => {
-        const worker = new Worker('/src/rpc/message-rpc.specs.native.worker.js')
+        const worker = new Worker('/src/test/message-rpc.specs.native.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), NativeSerializer).then(({api}) => {
           console.time('image')
           return api.imageSize(megaPixelImage)
@@ -192,7 +137,7 @@ define([
       })
 
       it('using json serializer', done => {
-        const worker = new Worker('/src/rpc/message-rpc.specs.json.worker.js')
+        const worker = new Worker('/src/test/message-rpc.specs.json.worker.js')
         MessageRPC({}, WebWorkerMessenger(worker), JsonSerializer).then(({api}) => {
           console.time('image')
           return api.imageSize(megaPixelImage)
@@ -204,7 +149,7 @@ define([
       })
 
       it('using binary serializer', done => {
-        const worker = new Worker('/src/rpc/message-rpc.specs.binary.worker.js')
+        const worker = new Worker('/src/test/message-rpc.specs.binary.worker.js')
 
         MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}), ConsoleMonitor('Image')).then(({api}) => {
           console.time('image')

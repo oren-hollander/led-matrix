@@ -15,7 +15,7 @@ require([
   'rpc/remote',
   'rpc/messenger',
   'serialization/binary-serializer',
-  'rpc/message-rpc.specs.image-serializer'
+  'test/message-rpc.specs.image-serializer'
 ], (
   _,
   MessageRPC,
