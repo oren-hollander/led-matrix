@@ -19,17 +19,17 @@ requirejs.config({
 requirejs([
   'lodash',
   'rpc/message-rpc',
-  'rpc/remote',
   'rpc/messenger',
-  'rpc/monitor',
+  'rpc/remote',
+  'util/relay',
   'serialization/json-serializer'
 ], (
   _,
   MessageRpc,
-  {RemoteApi},
   {WebSocketMessenger},
-  {ConsoleMonitor},
-  Serializer
+  {RemoteApi},
+  Relay,
+  JsonSerializer
 ) => {
 
   //////////////////////////////////////
@@ -94,49 +94,75 @@ requirejs([
 
   console.log('Starting WebSocket server')
 
+  const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
   const socketServer = new WebSocketServer({server: httpServer})
 
-  socketServer.on('connection', function(socket) {
-    console.log('socket connected')
-    createRpcChannel(socket)
+  const deviceApis = {}
+  const relaySockets = {}
 
+  socketServer.on('connection', socket => {
     socket.on('close', () => {
       console.log('socket closed')
     })
-  })
 
-  let devices = []
+    socket.on('message', strMessage => {
+      console.log(`message: ${strMessage}`)
+      const message = JSON.parse(strMessage)
+      switch (message.type) {
+        case 'signal':
+          socket.on('message', () => {})
+          connectSignalChannel(socket)
+          break
+        case 'rtc':
+          socket.on('message', () => {})
+          connectRtcChannel(socket, message.relayId)
+          break
+      }
+    })
 
-  const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
 
-  const serverApi = {
-    connectPad: (stationDeviceId, padApi) => {
-      if(devices[stationDeviceId]) {
-        return devices[stationDeviceId].connectPad(RemoteApi(padApi)).then(api => RemoteApi(api))
+    function connectSignalChannel(socket) {
+      let deviceApi
+
+      const signalApi = {
+        registerDevice: () => {
+          const deviceId = uniqueDeviceId()
+          console.log('-------- registerDevice --------')
+          console.log('registering', deviceId)
+          deviceApis[deviceId] = deviceApi
+          console.log(deviceApis[deviceId])
+          console.log('--------------------------------')
+          return deviceId
+        },
+        connectDevice: targetDeviceId => {
+          console.log('-------- connectDevice ---------')
+          console.log('connect device', targetDeviceId)
+          console.log(targetDeviceId)
+          console.log(deviceApis[targetDeviceId])
+          const relayId = uniqueDeviceId()
+          deviceApis[targetDeviceId].connectDevice(relayId)
+          console.log('--------------------------------')
+          return relayId
+        }
+      }
+
+      MessageRpc(RemoteApi(signalApi), WebSocketMessenger(socket), JsonSerializer).then(rpc => {
+        deviceApi = rpc.api
+      })
+    }
+
+    function connectRtcChannel(socket, relayId) {
+      console.log('--------- connectRtcChannel --------------')
+      if(relaySockets[relayId]){
+        console.log('second socket', relayId)
+        Relay(WebSocketMessenger(relaySockets[relayId]), WebSocketMessenger(socket))
+        delete relaySockets[relayId]
       }
       else {
-        throw `can't find station '${stationDeviceId}'`
+        console.log('first socket', relayId)
+        relaySockets[relayId] = socket
       }
+      console.log('--------------------------------')
     }
-  }
-
-  function createRpcChannel(socket){
-    MessageRpc(RemoteApi(serverApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('server')).then(({api: device}) => {
-      const deviceId = uniqueDeviceId()
-      devices[deviceId] = RemoteApi(device)
-      device.setDeviceId(deviceId)
-    })
-  }
+  })
 })
-
-/*
-
-  0. devices setup rpc channel with server
-  1. server calls device.getType(), devices return their type
-  1. station & pads call server.registerDevice(), receives device id, each on its own time
-  2. station shows its device id on screen, to let player enter it in pad
-  3. pad shows station device id entry ui
-  4. pad calls server.connectPad(padDeviceId, stationDeviceId)
-  5. server calls station.connectPad(padApi) // pad api
-
-*/

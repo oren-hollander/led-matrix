@@ -16,7 +16,7 @@ define([
   _,
   MessageRPC,
   {RemoteApi, RemoteFunction},
-  {MockMessengers, WebWorkerMessenger},
+  {MockMessengers, WebWorkerMessenger, createMockWorkerPair},
   SharedObjectProxy,
   NativeSerializer,
   JsonSerializer,
@@ -31,6 +31,49 @@ define([
 
     beforeEach(() => {
       [messenger1, messenger2] = MockMessengers()
+    })
+
+
+    it('disconnect messenger', done => {
+
+      const [a, b] = _.map(createMockWorkerPair(), WebWorkerMessenger)
+
+      const receiver = jasmine.createSpy()
+
+      b.setReceiver(receiver)
+      b.setReceiver(null)
+
+      a.send('hello')
+      _.delay(() => {
+        expect(receiver).not.toHaveBeenCalled()
+        done()
+      }, 100)
+
+    })
+
+    xit('should relay after a channel has established', done => {
+
+      // to game
+      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+        const api = {
+          f: () => {
+            rpc.disconnect()
+          }
+        }
+
+        rpc.connect(RemoteApi(api)).then(thatApi => {
+
+        })
+
+        rpc.createSharedObject()
+        rpc.releaseProxy()
+        rpc.releaseStub()
+      })
+
+      // to pad
+      MessageRPC(RemoteApi(api), messenger2, NativeSerializer)
+
+      done()
     })
 
     it('should connect and expose remote API', done => {
@@ -88,7 +131,7 @@ define([
       })
     })
 
-    fit('Shared Object Proxy', done => {
+    it('Shared Object Proxy', done => {
 
       let releaseProxy
 

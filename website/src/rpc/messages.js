@@ -32,7 +32,7 @@ define([
       return Object.assign({type}, args)
   }
 
-  const init = api => ({type: MessageTypes.Init, api})
+  const init = (api, ack) => ({type: MessageTypes.Init, api, ack})
   const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
   const releaseProxy = ref => ({type: MessageTypes.ReleaseProxy, ref})
   const releaseStub = ref => ({type: MessageTypes.ReleaseStub, ref})

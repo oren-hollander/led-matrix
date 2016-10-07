@@ -6,6 +6,35 @@ define([
   _
 ) => {
 
+  function MultiplexedWebWorkerMessenger(worker, keys){
+    let receivers = {}
+
+    worker.onmessage = ({data}) => {
+      const receiver = receivers[data.key]
+      if(receiver)
+        receiver(data.message)
+    }
+
+    return _.map(keys, key => {
+      return {
+        send: message => {
+          if(message instanceof ArrayBuffer){
+            worker.postMessage({key, message}, [message])
+          }
+          else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+            worker.postMessage({key, message}, message)
+          }
+          else {
+            worker.postMessage({key, message})
+          }
+        },
+        setReceiver: callback => {
+          receivers[key] = callback
+        }
+      }
+    })
+  }
+
   function WebWorkerMessenger(worker) {
     return {
       send: message => {
@@ -21,7 +50,8 @@ define([
       },
       setReceiver: callback => {
         worker.onmessage = ({data}) => {
-          callback(data.message)
+          if(callback)
+            callback(data.message)
         }
       }
     }
@@ -37,10 +67,28 @@ define([
       },
       setReceiver: callback => {
         socket.onmessage = message => {
-          callback(message.data)
+          if(callback)
+            callback(message.data)
         }
       }
     }
+  }
+
+  function createMockWorkerPair() {
+    const a = {
+      postMessage: message => {
+        if(b.onmessage)
+          _.defer(b.onmessage, {data: message})
+      }
+    }
+    const b = {
+      postMessage: message => {
+        if(a.onmessage)
+          _.defer(a.onmessage, {data: message})
+      }
+    }
+
+    return [a, b]
   }
 
   function MockMessengers() {
@@ -73,5 +121,5 @@ define([
     return [a, b]
   }
 
-  return {WebWorkerMessenger, WebSocketMessenger, MockMessengers}
+  return {WebWorkerMessenger, WebSocketMessenger, MultiplexedWebWorkerMessenger, MockMessengers, createMockWorkerPair}
 })

@@ -52,8 +52,8 @@ require([
   function connect() {
     const socket = new WebSocket(`ws://${window.location.host}`)
 
-    socket.onclose = () => {
-    }
+    // socket.onclose = () => {
+    // }
 
     socket.onopen = () => {
       MessageRPC(RemoteApi(padServerApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('pad socket')).then(({api}) => {
@@ -86,7 +86,7 @@ require([
 
   const handleTouch = e => {
     canvas.canvas.webkitRequestFullScreen()
-    // e.preventDefault()
+    e.preventDefault()
     _.forEach(buttons, button => {
       const screenTouches = _.map(e.touches, touch => ({x: touch.pageX * window.devicePixelRatio, y: touch.pageY * window.devicePixelRatio}))
       if(_.some(screenTouches, touch => pointInCircle(touch, button)))
@@ -124,17 +124,4 @@ require([
     })
     window.requestAnimationFrame(paint)
   }
-
-  // window.setInterval(() => {
-  //   _.forEach(buttons, button => {
-  //     if(Math.random() < 0.5){
-  //       button.pressed = !button.pressed
-  //       if(button.pressed)
-  //         stationApi.buttonPressed(button.name)
-  //       else
-  //         stationApi.buttonReleased(button.name)
-  //     }
-  //   })
-  // }, 3000)
-
 })

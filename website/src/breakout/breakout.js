@@ -15,14 +15,16 @@ require([
   'rpc/remote',
   'rpc/messenger',
   'rpc/priority',
-  'breakout/game'
+  'breakout/game',
+  'serialization/json-serializer'
 ], (
   _,
   MessageRPC,
   {RemoteApi},
   {WebWorkerMessenger},
   {setPriority, MessagePriorities},
-  Game
+  Game,
+  Serializer
 ) => {
 
   let station
