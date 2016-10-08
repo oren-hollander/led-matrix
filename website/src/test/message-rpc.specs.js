@@ -51,29 +51,36 @@ define([
 
     })
 
-    xit('should relay after a channel has established', done => {
+    it('should relay after a channel has established', done => {
+      const done2 = _.after(2, done)
 
-      // to game
-      MessageRPC(messenger1, NativeSerializer).then(rpc => {
-        const api = {
-          f: () => {
-            rpc.disconnect()
-          }
+      // Side A
+      MessageRPC(messenger1, NativeSerializer, ConsoleMonitor('A')).then(rpc => {
+
+        const localApi = {
+          add: (a, b) => a + b
         }
 
-        rpc.connect(RemoteApi(api)).then(thatApi => {
-
+        rpc.connect(RemoteApi(localApi)).then(remoteFunction => {
+          remoteFunction(6, 7).then(r => {
+            expect(r).toBe(42)
+            done2()
+          })
         })
-
-        rpc.createSharedObject()
-        rpc.releaseProxy()
-        rpc.releaseStub()
       })
 
-      // to pad
-      MessageRPC(RemoteApi(api), messenger2, NativeSerializer)
+      // Side B
+      MessageRPC(messenger2, NativeSerializer, ConsoleMonitor('B')).then(rpc => {
+        const mul = (a, b) => a * b
 
-      done()
+        rpc.connect(RemoteFunction(mul)).then(remoteApi => {
+          remoteApi.add(6, 7).then(r => {
+            expect(r).toBe(13)
+            done2()
+          })
+        })
+      })
+
     })
 
     it('should connect and expose remote API', done => {
@@ -82,12 +89,16 @@ define([
         add: (a, b) => a + b
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
+      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+        rpc.connect(RemoteApi(platformApi))
+      })
 
-      MessageRPC({}, messenger2, NativeSerializer).then(({api}) => {
-        api.add(3, 4).then(r => {
-          expect(r).toBe(7)
-          done()
+      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+        rpc.connect().then(api => {
+          api.add(3, 4).then(r => {
+            expect(r).toBe(7)
+            done()
+          })
         })
       })
     })
@@ -99,13 +110,17 @@ define([
         }
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
+      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+        rpc.connect(RemoteApi(platformApi))
+      })
 
-      MessageRPC({}, messenger2, NativeSerializer).then(({api}) => {
-        const f = a => a ** 2
-        api.applyFunction(RemoteFunction(f), 5).then(r => {
-          expect(r).toBe(25)
-          done()
+      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+        rpc.connect().then(api => {
+          const f = a => a ** 2
+          api.applyFunction(RemoteFunction(f), 5).then(r => {
+            expect(r).toBe(25)
+            done()
+          })
         })
       })
     })
@@ -117,16 +132,21 @@ define([
         }
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer)
+      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+        rpc.connect(RemoteApi(platformApi))
+      })
 
-      MessageRPC({}, messenger2, NativeSerializer).then(({api}) => {
-        const mathApi = {
-          pow: a => a ** 2
-        }
+      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+        rpc.connect().then(api => {
+          const mathApi = {
+            pow: a => a ** 2
+          }
 
-        api.applyFunction(RemoteApi(mathApi), 'pow', 5).then(r => {
-          expect(r).toBe(25)
-          done()
+          api.applyFunction(RemoteApi(mathApi), 'pow', 5).then(r => {
+            expect(r).toBe(25)
+            done()
+          })
+
         })
       })
     })
@@ -143,31 +163,36 @@ define([
         }
       }
 
-      MessageRPC(RemoteApi(platformApi), messenger1, NativeSerializer).then(({releaseProxy: rp}) => {
-        releaseProxy = rp
+      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+        releaseProxy = rpc.releaseProxy
+        rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC({}, messenger2, NativeSerializer, ConsoleMonitor('App')).then(({api, createSharedObject, releaseStub}) => {
-        const so = createSharedObject({x: 10, y: 20})
-        api.passSharedObject(so)
+      MessageRPC(messenger2, NativeSerializer, ConsoleMonitor('App')).then(rpc => {
+        const so = rpc.createSharedObject({x: 10, y: 20})
+        rpc.connect().then(api => {
+          api.passSharedObject(so)
 
-        const check = () => {
-          if(so.x === 10 || so.y === 20){
-            _.defer(check)
+          const check = () => {
+            if(so.x === 10 || so.y === 20){
+              _.defer(check)
+            }
+            else {
+              expect(so.x).toBe(11)
+              expect(so.y).toBe(21)
+              rpc.releaseStub(so)
+              done()
+            }
           }
-          else {
-            expect(so.x).toBe(11)
-            expect(so.y).toBe(21)
-            releaseStub(so)
-            done()
-          }
-        }
-        check()
+          check()
+        })
       })
+
     })
 
-    describe('speed test', () => {
+    describe('Serialization speed test', () => {
 
+      const connect = rpc => rpc.connect()
       const megaPixelImage = new Array(100000)
 
       for(let i = 0; i < megaPixelImage.length; i++){
@@ -176,24 +201,24 @@ define([
 
       it('using native serializer', done => {
         const worker = new Worker('src/test/message-rpc.specs.native.worker.js')
-        MessageRPC({}, WebWorkerMessenger(worker), NativeSerializer).then(({api}) => {
+        MessageRPC(WebWorkerMessenger(worker), NativeSerializer).then(connect).then(api => {
           console.time('native')
           return api.imageSize(megaPixelImage)
-        }).then(s => {
+        }).then(imageSize => {
           console.timeEnd('native')
-          expect(s).toBe(megaPixelImage.length)
+          expect(imageSize).toBe(megaPixelImage.length)
           done()
         })
       })
 
       it('using json serializer', done => {
         const worker = new Worker('src/test/message-rpc.specs.json.worker.js')
-        MessageRPC({}, WebWorkerMessenger(worker), JsonSerializer).then(({api}) => {
+        MessageRPC(WebWorkerMessenger(worker), JsonSerializer).then(connect).then(api => {
           console.time('json')
           return api.imageSize(megaPixelImage)
-        }).then(s => {
+        }).then(imageSize => {
           console.timeEnd('json')
-          expect(s).toBe(megaPixelImage.length)
+          expect(imageSize).toBe(megaPixelImage.length)
           done()
         })
       })
@@ -202,16 +227,17 @@ define([
         const worker = new Worker('src/test/message-rpc.specs.binary.worker.js')
 
         var statsMonitor = StatsMonitor('Stats');
-        MessageRPC({}, WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor).then(({api}) => {
-          console.time('binary')
-          megaPixelImage[Serializable] = 'Image'
-          return api.imageSize(megaPixelImage)
-        }).then(s => {
-          console.timeEnd('binary')
-          expect(s).toBe(megaPixelImage.length)
-          statsMonitor.log()
-          done()
-        })
+        MessageRPC(WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor)
+          .then(connect).then(api => {
+            console.time('binary')
+            megaPixelImage[Serializable] = 'Image'
+            return api.imageSize(megaPixelImage)
+          }).then(imageSize => {
+            console.timeEnd('binary')
+            expect(imageSize).toBe(megaPixelImage.length)
+            statsMonitor.log()
+            done()
+          })
       })
     })
   })

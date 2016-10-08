@@ -26,7 +26,8 @@ require(['jasmine-boot'], function () {
     'test/priority.specs',
     'test/relay.specs',
     'test/message-rpc.specs',
-    'test/messenger.specs'
+    'test/messenger.specs',
+    'test/binary-serializer.specs'
   ], function(){
     window.onload();
   })

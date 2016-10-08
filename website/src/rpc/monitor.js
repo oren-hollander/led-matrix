@@ -76,10 +76,7 @@ define([
     const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
         const initMessage = prefix(`${direction} Init`)
-        if(message.api.length > 0)
-          console.log(`${initMessage} ~ [${message.api.join()}]`)
-        else
-          console.log(initMessage)
+        console.log(`${initMessage} ${refIdLabel(message.rootRef)}]`)
       },
       [Messages.Types.Batch]: (message, direction) => {
         console.groupCollapsed(prefix(batchLabel(direction, message.rpcMessages)))

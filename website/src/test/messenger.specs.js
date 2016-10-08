@@ -13,6 +13,9 @@ define([
   NativeSerializer,
   {RemoteApi}
 ) => {
+
+  const connect = rpc => rpc.connect()
+
   describe('MultiplexWebWorkerMessenger', () =>  {
 
     let workerA, workerB
@@ -33,12 +36,12 @@ define([
         mul: (a, b) => a * b
       }
 
-      MessageRPC(RemoteApi(oneApi), sideAOne, NativeSerializer)
-      MessageRPC(RemoteApi(twoApi), sideATwo, NativeSerializer)
+      MessageRPC(sideAOne, NativeSerializer).then(rpc => rpc.connect(RemoteApi(oneApi)))
+      MessageRPC(sideATwo, NativeSerializer).then(rpc => rpc.connect(RemoteApi(twoApi)))
 
       Promise.all([
-        MessageRPC({}, sideBOne, NativeSerializer).then(({api}) => api.add(3, 4)),
-        MessageRPC({}, sideBTwo, NativeSerializer).then(({api}) => api.mul(5, 6))
+        MessageRPC(sideBOne, NativeSerializer).then(connect).then(api => api.add(3, 4)),
+        MessageRPC(sideBTwo, NativeSerializer).then(connect).then(api => api.mul(5, 6))
       ]).then(([r1, r2]) => {
         expect(r1).toBe(7)
         expect(r2).toBe(30)

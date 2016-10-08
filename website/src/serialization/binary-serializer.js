@@ -33,17 +33,15 @@ define([
     const valueSerializerCodes = Enum(_(valueSerializers).keys().sortBy().value())
 
     function writeInit(writer, init){
-      writer.uint8(init.api.length)
+      writer.uint32(init.rootRef)
+      writer.uint8(init.ack)
       _.forEach(init.api, writer.string)
     }
 
     function readInit(reader) {
-      const length = reader.uint8()
-      const api = new Array(length)
-      for(let i = 0; i < length; i++){
-        api[i] = reader.string()
-      }
-      return Messages.init(api)
+      const rootRef = reader.uint32()
+      const ack = reader.uint8() !== 0
+      return Messages.init(rootRef, ack)
     }
 
     function writeBatch(writer, batch){
@@ -319,8 +317,8 @@ define([
 
     function writeApi(writer, api){
       writer.uint32(api.ref)
-      writer.uint8(api.length)
-      _.forEach(api, writer.string)
+      writer.uint8(api.functionNames.length)
+      _.forEach(api.functionNames, writer.string)
     }
 
     function readApi(reader){
@@ -352,7 +350,6 @@ define([
 
     return {
       serialize: value => {
-
         const writer = DataWriter(SerialBufferWriter())
         writer.uint8(MessageTypeCodes.value(value.type))
         switch (value.type) {

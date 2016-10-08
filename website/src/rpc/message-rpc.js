@@ -8,7 +8,8 @@ define([
   'rpc/api-proxy',
   'util/promise',
   'rpc/ref-map',
-  'rpc/api-util'
+  'rpc/api-util',
+  'rpc/remote'
 ], (
   _,
   Queue,
@@ -17,49 +18,54 @@ define([
   {ApiProxy, SharedObjectProxy, FunctionProxy},
   {createPromiseWithSettler},
   RefMap,
-  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, RefId}
+  {ApiSymbol, FunctionSymbol, SharedObjectSymbol, RefId},
+  {RemoteFunction}
 ) => {
 
-  function MessageRPC(localApi, messenger, serializer, monitor) {
-    // let initialized = false
+  function MessageRPC(messenger, serializer, monitor) {
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const stubs = RefMap()
     const proxies = RefMap()
 
-    const localApiStub = stubs.add(localApi)
-    const {promise: proxyPromise, resolve: resolveProxy} = createPromiseWithSettler() // todo: handle reject with timeout
-    sendMessage(Messages.init(Object.keys(localApi), false))
+    const {promise: connectPromise, resolve: connectResolve} = createPromiseWithSettler()
+    const remoteConnect = RemoteFunction(obj => {
+      connectResolve(obj)
+    })
 
-    const createSharedObject = (prototype, updateProperty) => {
+    const rootRef = stubs.add(remoteConnect)
+
+    const {promise: proxyPromise, resolve: resolveInit} = createPromiseWithSettler() // todo: handle reject with timeout
+    sendMessage(Messages.init(rootRef, false))
+
+    const createSharedObject = (properties) => {
       const ref = stubs.reserveRefId()
-      const proxyWithSetters = SharedObjectProxy(prototype, ref, updateProperty)
+      const proxyWithSetters = SharedObjectProxy(properties, ref, handleOutgoingProxyPropertyUpdate)
       stubs.add(proxyWithSetters, ref)
       return proxyWithSetters.proxy
     }
 
-    function onInit(remoteApi, ack) {
-      if(!ack)
-        sendMessage(Messages.init(Object.keys(localApi), true))
+    const releaseRef = (refs, messageFactory) => obj => {
+      const ref = obj[RefId]
+      if(ref && refs.has(ref)){
+        refs.release(ref)
+        sendMessageByPriority(messageFactory(ref), MessagePriorities.Low)
+      }
+    }
 
-      const proxy = ApiProxy(remoteApi, localApiStub, handleOutgoingApiCall)
-      resolveProxy({
-        api: proxy,
-        createSharedObject: prototype => createSharedObject(prototype, handleOutgoingProxyPropertyUpdate),
-        releaseProxy: obj => {
-          const ref = obj[RefId]
-          if(ref && proxies.has(ref)){
-            proxies.release(ref)
-            sendMessageByPriority(Messages.releaseStub(ref), MessagePriorities.Low)
-          }
+    function onInit(remoteRootRef, ack) {
+      if(!ack)
+        sendMessage(Messages.init(rootRef, true))
+
+      resolveInit({
+        connect: obj => {
+          if(obj)
+            FunctionProxy(remoteRootRef, handleOutgoingFunctionCall)(obj)
+          return connectPromise
         },
-        releaseStub: obj => {
-          const ref = obj[RefId]
-          if(ref && stubs.has(ref)){
-            stubs.release(ref)
-            sendMessageByPriority(Messages.releaseProxy(ref), MessagePriorities.Low)
-          }
-        }
+        createSharedObject: createSharedObject,
+        releaseProxy: releaseRef(proxies, Messages.releaseStub),
+        releaseStub: releaseRef(stubs, Messages.releaseProxy)
       })
     }
 
@@ -244,7 +250,7 @@ define([
 
       switch (message.type) {
         case Messages.Types.Init:
-          onInit(message.api, message.ack)
+          onInit(message.rootRef, message.ack)
           break
         case Messages.Types.Batch:
           onBatch(message.rpcMessages)

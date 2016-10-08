@@ -29,5 +29,7 @@ require([
     }
   }
 
-  MessageRPC(RemoteApi(api), WebWorkerMessenger(self), JsonSerializer)
+  MessageRPC(WebWorkerMessenger(self), JsonSerializer).then(rpc => {
+    rpc.connect(RemoteApi(api))
+  })
 })
