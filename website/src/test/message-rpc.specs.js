@@ -11,7 +11,8 @@ define([
   'serialization/binary-serializer',
   'serialization/serialize',
   'rpc/monitor',
-  'test/message-rpc.specs.image-serializer'
+  'test/message-rpc.specs.image-serializer',
+  'util/relay'
 ], (
   _,
   MessageRPC,
@@ -23,7 +24,8 @@ define([
   BinarySerializer,
   {Serializable},
   {ConsoleMonitor, StatsMonitor},
-  ImageSerializer
+  ImageSerializer,
+  Relay
 ) => {
   describe('MessageRPC', () =>  {
 
@@ -251,6 +253,73 @@ define([
             done()
           })
 
+        })
+      })
+    })
+
+    describe('Relay two workers', () => {
+
+      it('should relay channel', done => {
+
+        const [client1Worker, server1Worker] = createMockWorkerPair()
+        const [client2Worker, server2Worker] = createMockWorkerPair()
+
+        const doneChatting = _.after(2, done)
+
+        function startChatServer(messenger1, messenger2){
+
+          const server1SignalChannel = messenger1.createChannel(1)
+          const server2SignalChannel = messenger2.createChannel(1)
+          const server1ChatChannel = messenger1.createChannel(2)
+          const server2ChatChannel = messenger2.createChannel(2)
+
+          Relay(server1ChatChannel, server2ChatChannel)
+
+          MessageRPC(server1SignalChannel, NativeSerializer).then(rpc => {
+            rpc.connect().then(chatApi => {
+              chatApi.startChat(2)
+            })
+          })
+
+          MessageRPC(server2SignalChannel, NativeSerializer).then(rpc => {
+            rpc.connect().then(chatApi => {
+              chatApi.startChat(2)
+            })
+          })
+        }
+
+        function startChatClient(messenger){
+          const signalChannel = messenger.createChannel(1)
+
+          MessageRPC(signalChannel, NativeSerializer).then(rpc => {
+
+            const chatApi = {
+              startChat: channel => {
+                const chatChannel = messenger.createChannel(channel)
+                MessageRPC(chatChannel, NativeSerializer).then(rpc => {
+                  rpc.connect(RemoteFunction(message => {
+                    expect(message).toEqual('hello')
+                    doneChatting()
+                  })).then(f => {
+                    f('hello')
+                  })
+                })
+              }
+            }
+
+            rpc.connect(RemoteApi(chatApi))
+          })
+        }
+
+        Promise.all([
+          WebWorkerChannelMessenger(client1Worker),
+          WebWorkerChannelMessenger(client2Worker),
+          WebWorkerChannelMessenger(server1Worker),
+          WebWorkerChannelMessenger(server2Worker),
+        ]).then(([client1Messenger, client2Messenger, server1Messenger, server2Messenger]) => {
+          startChatClient(client1Messenger)
+          startChatClient(client2Messenger)
+          startChatServer(server1Messenger, server2Messenger)
         })
       })
     })
