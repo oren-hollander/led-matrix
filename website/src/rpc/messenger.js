@@ -6,69 +6,72 @@ define([
   _
 ) => {
 
-  function MultiplexedWebWorkerMessenger(worker, keys){
-    let receivers = {}
+  // function MultiplexedWebWorkerMessenger(worker, keys){
+  //   let receivers = {}
+  //
+  //   worker.onmessage = ({data}) => {
+  //     const receiver = receivers[data.key]
+  //     if(receiver)
+  //       receiver(data.message)
+  //   }
+  //
+  //   return _.map(keys, key => {
+  //     return {
+  //       send: message => {
+  //         if(message instanceof ArrayBuffer){
+  //           worker.postMessage({key, message}, [message])
+  //         }
+  //         else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+  //           worker.postMessage({key, message}, message)
+  //         }
+  //         else {
+  //           worker.postMessage({key, message})
+  //         }
+  //       },
+  //       setReceiver: callback => {
+  //         receivers[key] = callback
+  //       }
+  //     }
+  //   })
+  // }
 
-    worker.onmessage = ({data}) => {
-      const receiver = receivers[data.key]
-      if(receiver)
-        receiver(data.message)
-    }
-
-    return _.map(keys, key => {
-      return {
-        send: message => {
-          if(message instanceof ArrayBuffer){
-            worker.postMessage({key, message}, [message])
-          }
-          else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
-            worker.postMessage({key, message}, message)
-          }
-          else {
-            worker.postMessage({key, message})
-          }
-        },
-        setReceiver: callback => {
-          receivers[key] = callback
-        }
-      }
-    })
-  }
-
-  function WebWorkerMessenger(worker) {
+  function WebWorkerMessenger(worker, serializer) {
     return {
       send: message => {
-        if(message instanceof ArrayBuffer){
-          worker.postMessage({message}, [message])
+        const serialized = serializer.serialize(message)
+        if(serialized instanceof ArrayBuffer){
+          worker.postMessage({message: serialized}, [serialized])
         }
-        else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
-          worker.postMessage({message}, message)
+        else if (_.isArray(serialized) && _.every(serialized, m => m instanceof ArrayBuffer)){
+          worker.postMessage({message: serialized}, serialized)
         }
         else {
-          worker.postMessage({message})
+          worker.postMessage({message: serialized})
         }
       },
       setReceiver: callback => {
         worker.onmessage = ({data}) => {
           if(callback)
-            callback(data.message)
+            callback(serializer.deserialize(data.message))
         }
       }
     }
   }
 
-  function WebSocketMessenger(socket) {
+  // todo handle array of ArrayBuffer
+  function WebSocketMessenger(socket, serializer) {
     return {
       send: message => {
-        socket.send(message, error => {
+        const serialized = serializer.serialize(message)
+        socket.send(serialized, error => {
           if(error)
-            console.log('socket send error: ', error, message)
+            console.log('socket send error: ', error)
         })
       },
       setReceiver: callback => {
-        socket.onmessage = message => {
+        socket.onmessage = ({data}) => {
           if(callback)
-            callback(message.data)
+            callback(serializer.deserialize(data))
         }
       }
     }
@@ -121,5 +124,5 @@ define([
     return [a, b]
   }
 
-  return {WebWorkerMessenger, WebSocketMessenger, MultiplexedWebWorkerMessenger, MockMessengers, createMockWorkerPair}
+  return {WebWorkerMessenger, WebSocketMessenger, MockMessengers, createMockWorkerPair}
 })

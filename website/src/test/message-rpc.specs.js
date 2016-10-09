@@ -33,10 +33,9 @@ define([
       [messenger1, messenger2] = MockMessengers()
     })
 
-
     it('disconnect messenger', done => {
 
-      const [a, b] = _.map(createMockWorkerPair(), WebWorkerMessenger)
+      const [a, b] = _.map(createMockWorkerPair(), worker => WebWorkerMessenger(worker, JsonSerializer))
 
       const receiver = jasmine.createSpy()
 
@@ -55,7 +54,7 @@ define([
       const done2 = _.after(2, done)
 
       // Side A
-      MessageRPC(messenger1, NativeSerializer, ConsoleMonitor('A')).then(rpc => {
+      MessageRPC(messenger1, ConsoleMonitor('A')).then(rpc => {
 
         const localApi = {
           add: (a, b) => a + b
@@ -70,7 +69,7 @@ define([
       })
 
       // Side B
-      MessageRPC(messenger2, NativeSerializer, ConsoleMonitor('B')).then(rpc => {
+      MessageRPC(messenger2, ConsoleMonitor('B')).then(rpc => {
         const mul = (a, b) => a * b
 
         rpc.connect(RemoteFunction(mul)).then(remoteApi => {
@@ -89,11 +88,11 @@ define([
         add: (a, b) => a + b
       }
 
-      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+      MessageRPC(messenger1).then(rpc => {
         rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+      MessageRPC(messenger2).then(rpc => {
         rpc.connect().then(api => {
           api.add(3, 4).then(r => {
             expect(r).toBe(7)
@@ -110,11 +109,11 @@ define([
         }
       }
 
-      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+      MessageRPC(messenger1).then(rpc => {
         rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+      MessageRPC(messenger2).then(rpc => {
         rpc.connect().then(api => {
           const f = a => a ** 2
           api.applyFunction(RemoteFunction(f), 5).then(r => {
@@ -132,11 +131,11 @@ define([
         }
       }
 
-      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+      MessageRPC(messenger1).then(rpc => {
         rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC(messenger2, NativeSerializer).then(rpc => {
+      MessageRPC(messenger2).then(rpc => {
         rpc.connect().then(api => {
           const mathApi = {
             pow: a => a ** 2
@@ -163,12 +162,12 @@ define([
         }
       }
 
-      MessageRPC(messenger1, NativeSerializer).then(rpc => {
+      MessageRPC(messenger1).then(rpc => {
         releaseProxy = rpc.releaseProxy
         rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC(messenger2, NativeSerializer, ConsoleMonitor('App')).then(rpc => {
+      MessageRPC(messenger2, ConsoleMonitor('App')).then(rpc => {
         const so = rpc.createSharedObject({x: 10, y: 20})
         rpc.connect().then(api => {
           api.passSharedObject(so)
@@ -201,7 +200,7 @@ define([
 
       it('using native serializer', done => {
         const worker = new Worker('src/test/message-rpc.specs.native.worker.js')
-        MessageRPC(WebWorkerMessenger(worker), NativeSerializer).then(connect).then(api => {
+        MessageRPC(WebWorkerMessenger(worker, NativeSerializer)).then(connect).then(api => {
           console.time('native')
           return api.imageSize(megaPixelImage)
         }).then(imageSize => {
@@ -213,7 +212,7 @@ define([
 
       it('using json serializer', done => {
         const worker = new Worker('src/test/message-rpc.specs.json.worker.js')
-        MessageRPC(WebWorkerMessenger(worker), JsonSerializer).then(connect).then(api => {
+        MessageRPC(WebWorkerMessenger(worker, JsonSerializer)).then(connect).then(api => {
           console.time('json')
           return api.imageSize(megaPixelImage)
         }).then(imageSize => {
@@ -227,7 +226,7 @@ define([
         const worker = new Worker('src/test/message-rpc.specs.binary.worker.js')
 
         var statsMonitor = StatsMonitor('Stats');
-        MessageRPC(WebWorkerMessenger(worker), BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor)
+        MessageRPC(WebWorkerMessenger(worker, BinarySerializer({Image: ImageSerializer}, statsMonitor)), statsMonitor)
           .then(connect).then(api => {
             console.time('binary')
             megaPixelImage[Serializable] = 'Image'

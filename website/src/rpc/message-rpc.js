@@ -22,7 +22,7 @@ define([
   {RemoteFunction}
 ) => {
 
-  function MessageRPC(messenger, serializer, monitor) {
+  function MessageRPC(messenger, monitor) {
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const stubs = RefMap()
@@ -228,25 +228,25 @@ define([
     function sendMessage(message) {
       if(monitor) {
         monitor.outgoingMessage(message)
-        monitor.serializeStart()
+        // monitor.serializeStart()
       }
 
-      const serializedMessage = serializer.serialize(message)
+      // const serializedMessage = serializer.serialize(message)
 
-      if(monitor)
-        monitor.serializeEnd()
+      // if(monitor)
+      //   monitor.serializeEnd()
 
-      messenger.send(serializedMessage)
+      messenger.send(message)
     }
 
-    const onmessage = data => {
-      if(monitor)
-        monitor.deserializeStart()
+    const onmessage = message => {
+      // if(monitor)
+      //   monitor.deserializeStart()
 
-      const message = serializer.deserialize(data)
+      // const message = serializer.deserialize(data)
 
       if(monitor){
-        monitor.deserializeEnd()
+        // monitor.deserializeEnd()
         monitor.incomingMessage(message)
       }
 

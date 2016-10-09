@@ -29,7 +29,7 @@ require([
     }
   }
 
-  MessageRPC(WebWorkerMessenger(self), NativeSerializer).then(rpc => {
+  MessageRPC(WebWorkerMessenger(self, NativeSerializer)).then(rpc => {
     rpc.connect(RemoteApi(api))
   })
 })
