@@ -291,27 +291,39 @@ define([
       return Messages.rpcProxyPropertyUpdate(reader.uint32(), reader.string(), JSON.parse(reader.string()))
     }
 
+    const JsonSerializedValue = 0
+    const UndefinedSerializedValue = 1
+    const customSerializedValue = serializerName => 2 + valueSerializerCodes.value(serializerName)
+    const customSerializerName = serializerCode => valueSerializerCodes.name(serializerCode - 2)
+
     function writeValue(writer, value){
-      const serializerName = value.value[Serializable]
-      if(serializerName){
-        writer.uint8(valueSerializerCodes.value(serializerName) + 1)
-        valueSerializers[serializerName].writeValue(writer, value.value)
+      if(value.value){
+        const serializerName = value.value[Serializable]
+        if(serializerName){
+          writer.uint8(customSerializedValue(serializerName))
+          valueSerializers[serializerName].writeValue(writer, value.value)
+        }
+        else {
+          writer.uint8(JsonSerializedValue)
+          writer.string(JSON.stringify(value.value))
+        }
       }
       else {
-        writer.uint8(0)
-        writer.string(JSON.stringify(value.value))
+        writer.uint8(UndefinedSerializedValue)
       }
     }
 
     function readValue(reader){
       const serializerCode = reader.uint8()
-      if(serializerCode > 0){
-        const serializerName = valueSerializerCodes.name(serializerCode - 1)
-        const value = valueSerializers[serializerName].readValue(reader)
-        return Messages.rpcValue(value)
-      }
-      else {
-        return Messages.rpcValue(JSON.parse(reader.string()))
+      switch (serializerCode) {
+        case JsonSerializedValue:
+          return Messages.rpcValue(JSON.parse(reader.string()))
+        case UndefinedSerializedValue:
+          return Messages.rpcValue(undefined)
+        default:
+          const serializerName = customSerializerName(serializerCode)
+          const value = valueSerializers[serializerName].readValue(reader)
+          return Messages.rpcValue(value)
       }
     }
 

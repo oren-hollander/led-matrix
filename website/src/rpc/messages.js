@@ -35,9 +35,9 @@ define([], () => {
   const rpcApiCall = (id, ref, func, args, returnPriority) =>
     rpcMessage(MessageTypes.ApiCall, {id, ref, func, args, returnPriority})
   const rpcFunctionCall = (id, ref, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, ref, args, returnPriority})
-  const rpcReturn = (id, ref, value, callTimestamp) => rpcMessage(MessageTypes.Return, {id, ref, value})
+  const rpcReturn = (id, ref, value) => rpcMessage(MessageTypes.Return, {id, ref, value})
 
-  const rpcError = (id, ref, error, callTimestamp) => rpcMessage(MessageTypes.Error, {id, ref, error})
+  const rpcError = (id, ref, error) => rpcMessage(MessageTypes.Error, {id, ref, error})
 
   const rpcStubPropertyUpdate = (ref, prop, value) => rpcMessage(MessageTypes.StubPropertyUpdate, {ref, prop, value})
   const rpcProxyPropertyUpdate = (ref, prop, value) => rpcMessage(MessageTypes.ProxyPropertyUpdate, {ref, prop, value})

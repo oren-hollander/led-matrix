@@ -13,11 +13,16 @@ define([], () => {
   const sqrt = Math.sqrt
   const atan2 = Math.atan2
 
-  const Point = (x, y) => ({t: Types.Point, x, y})
-  const Line = (p1, p2) => ({t: Types.Line, p1, p2})
+  const Point = p => ({paint: view => {
+    view.line(x, y)
+  }, x, y})
+
+  const Line = (p1, p2) => ({paint: view => {
+    // view.
+  }, p1, p2})
+
   const Circle = (c, r) => ({t: Types.Circle, c, r})
   const Box = (c, hw, hh) => ({t: Types.Box, c, hw, hh})
-  const HPill = (c, hw, hh) => ({t: Types.HPill, c, hw, hh})
   const Shape = shapes => ({t: Types.Shape, shapes})
 
   const lineLength = line => sqrt((line.p1.x - line.p2.x) ** 2 + (line.p1.y - line.p2.y) ** 2)
@@ -41,7 +46,6 @@ define([], () => {
     return lineLength(Line(p, v));
   }
 
-
   function pointInShape(point, shape){
     switch (shape.t){
       case Types.Point:
@@ -57,4 +61,49 @@ define([], () => {
         return _.some(shape.shapes, _.partial(pointInShape, point))
     }
   }
+
+  function Component(w, h, painter){
+
+    const components = []
+
+    function addComponent(component, x, y) {
+      components.push({component, x, y})
+    }
+
+    function paint(ctx) {
+      _.forEach(components, ({component, x, y}) => {
+        ctx.save()
+        ctx.rect(x, y, component.w, component.h)
+        ctx.clip()
+        ctx.translate(x, y)
+        component.paint(ctx)
+        ctx.restore()
+      })
+      if(painter)
+        painter(ctx)
+    }
+
+    return {w, h, paint, addComponent}
+  }
+
+  Component(100, 100, ctx => {
+    ctx.strokeRect(0, 0, 100, 100)
+  })
+
+  // const VStack = components => {
+  //   const width = _.maxBy(components, 'w')
+  //   const height = _.sumBy(components, 'h')
+  //
+  //   const stack = Component(width, height)
+  //   const ys = _(components)
+  //     .map('h')
+  //     .reduce(, ([hs, th], h) => {
+  //       hs.push(th)
+  //       return [hs, th + h]
+  //     }, [[], 0])
+  //     .value()
+  //
+  //
+  //   _(components).zip(ys).forEach(([component, y]) => stack.addComponent(component, 0, y))
+  // }
 })

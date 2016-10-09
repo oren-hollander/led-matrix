@@ -15,7 +15,8 @@ require([
   'rpc/messenger',
   'rpc/monitor',
   'geometry/geometry',
-  'serialization/json-serializer'
+  'serialization/json-serializer',
+  'canvas/keyboard'
 ], (
   _,
   {FullScreenCanvas},
@@ -23,8 +24,9 @@ require([
   {RemoteApi},
   {WebSocketMessenger},
   {ConsoleMonitor},
-  {pointInCircle},
-  Serializer
+  {pointInCircle, Rect},
+  Serializer,
+  {Keypad, CodeInput}
 ) => {
 
   const canvasWidth = 2400
@@ -62,13 +64,12 @@ require([
     }
   }
 
-  connect()
+  // connect()
 
   function showConnectToStationUI(){
     document.getElementById('connect').addEventListener('click', connectToStation)
   }
 
-  let canvas
 
   function pressButton(button) {
     if(!button.pressed) {
@@ -103,25 +104,42 @@ require([
         stationApi = api
         const panel = document.getElementById('connectPanel')
         panel.parentNode.removeChild(panel)
-        canvas = FullScreenCanvas(canvasWidth, canvasHeight)
-        canvas.canvas.addEventListener('touchstart', handleTouch, false)
-        canvas.canvas.addEventListener('touchmove', handleTouch, false)
-        canvas.canvas.addEventListener('touchcancel', handleTouch, false)
-        canvas.canvas.addEventListener('touchend', handleTouch, false)
-        window.requestAnimationFrame(paint)
       })
     }
   }
 
+  let canvas = FullScreenCanvas(canvasWidth, canvasHeight)
+  canvas.addEventListener('touchstart', handleTouch, false)
+  canvas.addEventListener('touchmove', handleTouch, false)
+  canvas.addEventListener('touchcancel', handleTouch, false)
+  canvas.addEventListener('touchend', handleTouch, false)
+
+  const keypad = Keypad(canvas)
+  const codeInput = CodeInput(canvas, 5)
+  codeInput.add('1')
+  codeInput.add('2')
+
   function paint() {
-    const ctx = canvas.context
-    ctx.clearRect(0, 0,  canvasWidth, canvasHeight)
-    _.forEach(buttons, button => {
-      ctx.fillStyle = button.color
-      ctx.beginPath()
-      ctx.arc(button.x, button.y, button.r, 0, Math.PI * 2)
-      ctx.fill()
-    })
+
+    const keypadHeight = canvas.height / 2
+    const keypadWidth = keypadHeight * 3 / 4
+    const keypadX = (canvas.width - keypadWidth) / 2
+    const keypadY = (canvas.height - keypadHeight) / 2
+
+    keypad.paint(Rect(keypadX, keypadY, keypadWidth, keypadHeight))
+    codeInput.paint(Rect(keypadX, keypadY - 200, keypadWidth, 200))
+
+    // const ctx = canvas.getContext('2d')
+    // ctx.clearRect(0, 0,  canvasWidth, canvasHeight)
+    // _.forEach(buttons, button => {
+    //   ctx.fillStyle = button.color
+    //   ctx.beginPath()
+    //   ctx.arc(button.x, button.y, button.r, 0, Math.PI * 2)
+    //   ctx.fill()
+    // })
+
     window.requestAnimationFrame(paint)
   }
+
+  window.requestAnimationFrame(paint)
 })

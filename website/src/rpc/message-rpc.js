@@ -178,13 +178,15 @@ define([
     }
 
     function handleIncomingFunctionCall({id, ref, args, returnPriority, ts}) {
-      stubs.get(ref)(... args.map(processIncomingRpcValue))
-        .then(result => {
+      const promise = stubs.get(ref)(... args.map(processIncomingRpcValue))
+      if(returnPriority !== MessagePriorities.None) {
+        promise.then(result => {
           handleOutgoingReturn(result, id, ref, returnPriority, ts)
         })
         .catch(error => {
           handleOutgoingError(error, id, ref, returnPriority, ts)
         })
+      }
     }
 
     function handleIncomingReturn({id, value}) {

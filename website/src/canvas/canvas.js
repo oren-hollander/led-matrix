@@ -9,14 +9,11 @@ define([
 ) => {
 
 
-  let canvas
-  let ctx
-
   function FullScreenCanvas(width, height, fullScreenStateChange) {
     const div = document.createElement('div')
     document.body.appendChild(div)
 
-    canvas = document.createElement('canvas')
+    const canvas = document.createElement('canvas')
     div.appendChild(canvas)
 
     div.style.minHeight = '100%'
@@ -32,8 +29,6 @@ define([
     canvas.style.right = '0'
     canvas.style.top = '0'
     canvas.style.bottom = '0'
-
-    ctx = canvas.getContext('2d')
 
     canvas.addEventListener('click', () => {
       if(!document.webkitFullscreenElement)
@@ -51,7 +46,7 @@ define([
       }
     })
 
-    return {context: ctx, canvas, exitFullScreen: window.webkitExitFullscreen}
+    return canvas
     // function showRequestFullScreenMessage() {
     //   ctx.clearRect(0, 0, canvas.width, canvas.height)
     //   ctx.lineWidth = 8

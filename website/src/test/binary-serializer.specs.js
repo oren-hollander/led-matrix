@@ -36,5 +36,18 @@ define([
       console.log(message, message2)
       expect(message).toEqual(message2)
     })
+
+    it('should serialize an undefined return value', () => {
+      const serializer = BinarySerializer()
+      const message = Messages.batch([
+        Messages.rpcReturn(1, 1, Messages.rpcValue(undefined))
+      ])
+
+      const buffers = serializer.serialize(message)
+      const message2 = serializer.deserialize(buffers)
+      console.log(message, message2)
+      expect(message).toEqual(message2)
+
+    })
   })
 })
