@@ -22,7 +22,7 @@ define([
   {RemoteFunction}
 ) => {
 
-  function MessageRPC(messenger, serializer, monitor) {
+  function MessageRPC(channel, serializer, monitor) {
     let queue = Queue(sendBatch)
     const settlers = new Map()
     const stubs = RefMap()
@@ -36,7 +36,7 @@ define([
     const rootRef = stubs.add(remoteConnect)
 
     const {promise: proxyPromise, resolve: resolveInit} = createPromiseWithSettler() // todo: handle reject with timeout
-    sendMessage(Messages.init(rootRef, false))
+    sendMessage(Messages.init(rootRef))
 
     const createSharedObject = (properties) => {
       const ref = stubs.reserveRefId()
@@ -53,10 +53,7 @@ define([
       }
     }
 
-    function onInit(remoteRootRef, ack) {
-      if(!ack)
-        sendMessage(Messages.init(rootRef, true))
-
+    function onInit(remoteRootRef) {
       resolveInit({
         connect: obj => {
           if(obj)
@@ -236,7 +233,7 @@ define([
       if(monitor)
         monitor.serializeEnd()
 
-      messenger.send(serializedMessage)
+      channel.send(serializedMessage)
     }
 
     const onmessage = data => {
@@ -252,7 +249,7 @@ define([
 
       switch (message.type) {
         case Messages.Types.Init:
-          onInit(message.rootRef, message.ack)
+          onInit(message.rootRef)
           break
         case Messages.Types.Batch:
           onBatch(message.rpcMessages)
@@ -267,7 +264,7 @@ define([
           throw 'Unknown message!'
       }
     }
-    messenger.setReceiver(onmessage)
+    channel.setReceiver(onmessage)
 
     return proxyPromise
   }

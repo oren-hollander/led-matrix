@@ -20,17 +20,20 @@ require([
   _,
   MessageRPC,
   {RemoteApi},
-  {WebWorkerMessenger},
+  {WebWorkerChannelMessenger},
   BinarySerializer,
   ImageSerializer
 ) => {
 
-  MessageRPC(WebWorkerMessenger(self), BinarySerializer({Image: ImageSerializer})).then(rpc => {
-    const api = {
-      imageSize: image => {
-        return image.length
+  WebWorkerChannelMessenger(self).then(messenger => {
+    const channel = messenger.createChannel(1)
+    MessageRPC(channel, BinarySerializer({Image: ImageSerializer})).then(rpc => {
+      const api = {
+        imageSize: image => {
+          return image.length
+        }
       }
-    }
-    rpc.connect(RemoteApi(api))
+      rpc.connect(RemoteApi(api))
+    })
   })
 })

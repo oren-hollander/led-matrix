@@ -19,7 +19,7 @@ require([
   _,
   MessageRPC,
   {RemoteApi},
-  {WebWorkerMessenger},
+  {WebWorkerChannelMessenger},
   NativeSerializer
 ) => {
 
@@ -29,7 +29,10 @@ require([
     }
   }
 
-  MessageRPC(WebWorkerMessenger(self), NativeSerializer).then(rpc => {
-    rpc.connect(RemoteApi(api))
+  WebWorkerChannelMessenger(self).then(messenger => {
+    const channel = messenger.createChannel(1)
+    MessageRPC(channel, NativeSerializer).then(rpc => {
+      rpc.connect(RemoteApi(api))
+    })
   })
 })

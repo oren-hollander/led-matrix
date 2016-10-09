@@ -19,7 +19,7 @@ require([
   _,
   MessageRPC,
   {RemoteApi},
-  {WebWorkerMessenger},
+  {WebWorkerChannelMessenger},
   JsonSerializer
 ) => {
 
@@ -29,7 +29,10 @@ require([
     }
   }
 
-  MessageRPC(WebWorkerMessenger(self), JsonSerializer).then(rpc => {
-    rpc.connect(RemoteApi(api))
+  WebWorkerChannelMessenger(self).then(messenger => {
+    const channel = messenger.createChannel(1)
+    MessageRPC(channel, JsonSerializer).then(rpc => {
+      rpc.connect(RemoteApi(api))
+    })
   })
 })

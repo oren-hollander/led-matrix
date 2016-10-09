@@ -34,14 +34,12 @@ define([
 
     function writeInit(writer, init){
       writer.uint32(init.rootRef)
-      writer.uint8(init.ack)
       _.forEach(init.api, writer.string)
     }
 
     function readInit(reader) {
       const rootRef = reader.uint32()
-      const ack = reader.uint8() !== 0
-      return Messages.init(rootRef, ack)
+      return Messages.init(rootRef)
     }
 
     function writeBatch(writer, batch){

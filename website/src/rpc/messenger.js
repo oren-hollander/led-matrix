@@ -1,50 +1,26 @@
 'use strict'
 
 define([
-  'lodash'
+  'lodash',
+  'util/promise'
 ], (
-  _
+  _,
+  {createPromiseWithSettler}
 ) => {
 
-  // function MultiplexedWebWorkerMessenger(worker, keys){
-  //   let receivers = {}
-  //
-  //   worker.onmessage = ({data}) => {
-  //     const receiver = receivers[data.key]
-  //     if(receiver)
-  //       receiver(data.message)
-  //   }
-  //
-  //   return _.map(keys, key => {
-  //     return {
-  //       send: message => {
-  //         if(message instanceof ArrayBuffer){
-  //           worker.postMessage({key, message}, [message])
-  //         }
-  //         else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
-  //           worker.postMessage({key, message}, message)
-  //         }
-  //         else {
-  //           worker.postMessage({key, message})
-  //         }
-  //       },
-  //       setReceiver: callback => {
-  //         receivers[key] = callback
-  //       }
-  //     }
-  //   })
-  // }
-
   function WebWorkerChannelMessenger(worker) {
+
+    const {promise, resolve} = createPromiseWithSettler()
+
     let receivers = []
-    let connected = false
+
     worker.onmessage = ({data}) => {
       if(data.channel === 0) {
         switch(data.message){
           case 'init':
             worker.postMessage({channel: 0, message: 'init-ack'})
           case 'init-ack':
-            connected = true
+            resolve({createChannel})
         }
       }
       else {
@@ -57,10 +33,6 @@ define([
     worker.postMessage({channel: 0, message: 'init'})
 
     function createChannel(channel) {
-      if(!connected){
-        throw new Error('Messenger not connected')
-      }
-
       if(channel < 1){
         throw new Error('channel must be a positive integer')
       }
@@ -83,7 +55,7 @@ define([
       }
     }
 
-    return {createChannel}
+    return promise
   }
 
   function WebWorkerMessenger(worker) {
@@ -143,35 +115,5 @@ define([
     return [a, b]
   }
 
-  function MockMessengers() {
-
-    let onAMessage
-    let onBMessage
-
-    const a = {
-      send: message => {
-        if(onBMessage){
-          _.defer(onBMessage, message)
-        }
-      },
-      setReceiver: callback => {
-        onAMessage = callback
-      }
-    }
-
-    const b = {
-      send: message => {
-        if (onAMessage){
-          _.defer(onAMessage, message)
-        }
-      },
-      setReceiver: callback => {
-          onBMessage = callback
-      }
-    }
-
-    return [a, b]
-  }
-
-  return {WebWorkerMessenger, WebSocketMessenger, MockMessengers, createMockWorkerPair}
+  return {WebWorkerMessenger, createMockWorkerPair, WebWorkerChannelMessenger}
 })
