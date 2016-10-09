@@ -1,33 +1,33 @@
 'use strict'
 
 define(['lodash', '../util/annotations'], (_, {Annotations, annotate, getAnnotation, getAnnotations, registerAnnotation}) => {
-  describe('Annotations', function () {
+  describe('Annotations', () => {
 
     registerAnnotation('MyAnnotation', Symbol('my-annotation'))
     registerAnnotation('MyOtherAnnotation', Symbol('my-other-annotation'))
 
-    it('should not be able to annotate with an unknown annotation', function () {
+    it('should not be able to annotate with an unknown annotation', () => {
       expect(() => {
         const myObject = {}
         annotate(myObject, Symbol('my invented annotation'), 'Some value')
       }).toThrowError('Unknown annotation')
     })
 
-    it('should not be able to get annotation with an unknown annotation', function () {
+    it('should not be able to get annotation with an unknown annotation', () => {
       expect(() => {
         const myObject = {}
         getAnnotation(myObject, Symbol('my invented annotation'))
       }).toThrowError('Unknown annotation')
     })
 
-    it('should annotate with a known annotation', function () {
+    it('should annotate with a known annotation', () => {
       const myObject = {}
       annotate(myObject, Annotations.MyAnnotation, 'Some value')
       const annotationValue = getAnnotation(myObject, Annotations.MyAnnotation)
       expect(annotationValue).toEqual('Some value')
     })
 
-    it('should return all annotation', function () {
+    it('should return all annotation', () => {
       const myObject = {}
       annotate(myObject, Annotations.MyAnnotation, 'Some value')
 

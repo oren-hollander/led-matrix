@@ -24,7 +24,7 @@ define([
       [workerA, workerB] = createMockWorkerPair()
     })
 
-    it('should multiplex two messengers on a single worker', done => {
+    xit('should multiplex two messengers on a single worker', done => {
       const [sideAOne, sideATwo] = MultiplexedWebWorkerMessenger(workerA, ['one', 'two'])
       const [sideBOne, sideBTwo] = MultiplexedWebWorkerMessenger(workerB, ['one', 'two'])
 
