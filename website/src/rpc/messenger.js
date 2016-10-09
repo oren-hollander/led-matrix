@@ -35,35 +35,84 @@ define([
   //   })
   // }
 
-  function WebWorkerMessenger(worker, serializer) {
+  function WebWorkerChannelMessenger(worker) {
+    let receivers = []
+    let connected = false
+    worker.onmessage = ({data}) => {
+      if(data.channel === 0) {
+        switch(data.message){
+          case 'init':
+            worker.postMessage({channel: 0, message: 'init-ack'})
+          case 'init-ack':
+            connected = true
+        }
+      }
+      else {
+        const receiver = receivers[data.channel]
+        if(receiver)
+          receiver(data.message)
+      }
+    }
+
+    worker.postMessage({channel: 0, message: 'init'})
+
+    function createChannel(channel) {
+      if(!connected){
+        throw new Error('Messenger not connected')
+      }
+
+      if(channel < 1){
+        throw new Error('channel must be a positive integer')
+      }
+
+      return {
+        send: message => {
+          if(message instanceof ArrayBuffer){
+            worker.postMessage({channel, message}, [message])
+          }
+          else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+            worker.postMessage({channel, message}, message)
+          }
+          else {
+            worker.postMessage({channel, message})
+          }
+        },
+        setReceiver: callback => {
+          receivers[channel] = callback
+        }
+      }
+    }
+
+    return {createChannel}
+  }
+
+  function WebWorkerMessenger(worker) {
     return {
       send: message => {
-        const serialized = serializer.serialize(message)
-        if(serialized instanceof ArrayBuffer){
-          worker.postMessage({message: serialized}, [serialized])
+        if(message instanceof ArrayBuffer){
+          worker.postMessage({message}, [message])
         }
-        else if (_.isArray(serialized) && _.every(serialized, m => m instanceof ArrayBuffer)){
-          worker.postMessage({message: serialized}, serialized)
+        else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+          worker.postMessage({message}, message)
         }
         else {
-          worker.postMessage({message: serialized})
+          worker.postMessage({message})
         }
       },
       setReceiver: callback => {
         worker.onmessage = ({data}) => {
           if(callback)
-            callback(serializer.deserialize(data.message))
+            callback(data.message)
         }
       }
     }
   }
 
   // todo handle array of ArrayBuffer
-  function WebSocketMessenger(socket, serializer) {
+  function WebSocketMessenger(socket) {
     return {
       send: message => {
-        const serialized = serializer.serialize(message)
-        socket.send(serialized, error => {
+        socket.send(message, error => {
           if(error)
             console.log('socket send error: ', error)
         })
@@ -71,7 +120,7 @@ define([
       setReceiver: callback => {
         socket.onmessage = ({data}) => {
           if(callback)
-            callback(serializer.deserialize(data))
+            callback(data)
         }
       }
     }

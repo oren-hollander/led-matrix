@@ -25,7 +25,7 @@ require([
   ImageSerializer
 ) => {
 
-  MessageRPC(WebWorkerMessenger(self, BinarySerializer({Image: ImageSerializer}))).then(rpc => {
+  MessageRPC(WebWorkerMessenger(self), BinarySerializer({Image: ImageSerializer})).then(rpc => {
     const api = {
       imageSize: image => {
         return image.length
