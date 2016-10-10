@@ -2,28 +2,30 @@
 
 define([
   'lodash',
-  'rpc/queue',
+  'rpc/outgoing-message-queue',
   'rpc/messages',
   'rpc/priority',
   'rpc/api-proxy',
   'util/promise',
   'rpc/ref-map',
   'rpc/api-util',
-  'rpc/remote'
+  'rpc/remote',
+  'util/clock'
 ], (
   _,
-  Queue,
+  OutgoingMessageQueue,
   Messages,
   {MessagePriorities},
   {ApiProxy, SharedObjectProxy, FunctionProxy},
   {createPromiseWithSettler},
   RefMap,
   {ApiSymbol, FunctionSymbol, SharedObjectSymbol, RefId},
-  {RemoteFunction}
+  {RemoteFunction},
+  {SystemClock}
 ) => {
 
   function MessageRPC(channel, serializer, monitor) {
-    let queue = Queue(sendBatch)
+    let queue = OutgoingMessageQueue(sendBatch, SystemClock)
     const settlers = new Map()
     const stubs = RefMap()
     const proxies = RefMap()
@@ -112,14 +114,10 @@ define([
     }
 
     function sendMessageByPriority(message, priority){
-      if(priority === MessagePriorities.Immediate){
-        sendMessage(Messages.batch([message]))
-      }
-      else {
-        if(monitor)
-          monitor.queueMessage(message)
-        queue.schedule(message, priority)
-      }
+      if(monitor)
+        monitor.queueMessage(message)
+
+      queue.schedule(message, priority)
     }
 
     function handleOutgoingApiCall(id, ref, func, args, callPriority, returnPriority, settler) {
