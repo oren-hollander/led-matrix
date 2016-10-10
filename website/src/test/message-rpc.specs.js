@@ -23,7 +23,7 @@ define([
   JsonSerializer,
   {BinaryMultiBufferSerializer},
   {Serializable},
-  {ConsoleMonitor, StatsMonitor},
+  {RpcMonitor, StatsMonitor, DevToolsMonitor, ConsoleLogger, LocalLogger},
   ImageSerializer,
   Relay
 ) => {
@@ -59,7 +59,7 @@ define([
       const done2 = _.after(2, done)
 
       // Side A
-      MessageRPC(channelA, NativeSerializer, ConsoleMonitor('A')).then(rpc => {
+      MessageRPC(channelA, NativeSerializer, DevToolsMonitor('A')).then(rpc => {
 
         const localApi = {
           add: (a, b) => a + b
@@ -74,7 +74,7 @@ define([
       })
 
       // Side B
-      MessageRPC(channelB, NativeSerializer, ConsoleMonitor('B')).then(rpc => {
+      MessageRPC(channelB, NativeSerializer, RpcMonitor('B', ConsoleLogger)).then(rpc => {
         const mul = (a, b) => a * b
 
         rpc.connect(RemoteFunction(mul)).then(remoteApi => {
@@ -172,7 +172,7 @@ define([
         rpc.connect(RemoteApi(platformApi))
       })
 
-      MessageRPC(channelB, NativeSerializer, ConsoleMonitor('App')).then(rpc => {
+      MessageRPC(channelB, NativeSerializer, RpcMonitor('App', ConsoleLogger)).then(rpc => {
         const so = rpc.createSharedObject({x: 10, y: 20})
         rpc.connect().then(api => {
           api.passSharedObject(so)
@@ -224,7 +224,10 @@ define([
         const worker = new Worker('src/test/message-rpc.specs.json.worker.js')
         WebWorkerChannelMessenger(worker).then(messenger => {
           const channel = messenger.createChannel(1)
-          MessageRPC(channel, JsonSerializer).then(connect).then(api => {
+          const debugChannel = messenger.createChannel(2)
+          debugChannel.setReceiver(LocalLogger(ConsoleLogger))
+
+          MessageRPC(channel, JsonSerializer, RpcMonitor('Page', ConsoleLogger)).then(connect).then(api => {
             console.time('json')
             return api.imageSize(megaPixelImage)
           }).then(imageSize => {
@@ -238,7 +241,7 @@ define([
       it('using binary serializer', done => {
         const worker = new Worker('src/test/message-rpc.specs.binary.worker.js')
 
-        var statsMonitor = StatsMonitor('Stats');
+        var statsMonitor = StatsMonitor('Stats', ConsoleLogger)
         WebWorkerChannelMessenger(worker).then(messenger => {
           const channel = messenger.createChannel(1)
           MessageRPC(channel, BinaryMultiBufferSerializer({Image: ImageSerializer}, statsMonitor), statsMonitor)

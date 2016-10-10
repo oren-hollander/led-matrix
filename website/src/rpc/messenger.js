@@ -58,45 +58,44 @@ define([
     return promise
   }
 
-  function WebWorkerMessenger(worker) {
-    return {
-      send: message => {
-        if(message instanceof ArrayBuffer){
-          worker.postMessage({message}, [message])
-        }
-        else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
-          worker.postMessage({message}, message)
-        }
-        else {
-          worker.postMessage({message})
-        }
-      },
-      setReceiver: callback => {
-        worker.onmessage = ({data}) => {
-          if(callback)
-            callback(data.message)
-        }
-      }
-    }
-  }
-
-  // todo handle array of ArrayBuffer
-  function WebSocketMessenger(socket) {
-    return {
-      send: message => {
-        socket.send(message, error => {
-          if(error)
-            console.log('socket send error: ', error)
-        })
-      },
-      setReceiver: callback => {
-        socket.onmessage = ({data}) => {
-          if(callback)
-            callback(data)
-        }
-      }
-    }
-  }
+  // function WebWorkerMessenger(worker) {
+  //   return {
+  //     send: message => {
+  //       if(message instanceof ArrayBuffer){
+  //         worker.postMessage({message}, [message])
+  //       }
+  //       else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
+  //         worker.postMessage({message}, message)
+  //       }
+  //       else {
+  //         worker.postMessage({message})
+  //       }
+  //     },
+  //     setReceiver: callback => {
+  //       worker.onmessage = ({data}) => {
+  //         if(callback)
+  //           callback(data.message)
+  //       }
+  //     }
+  //   }
+  // }
+  //
+  // function WebSocketMessenger(socket) {
+  //   return {
+  //     send: message => {
+  //       socket.send(message, error => {
+  //         if(error)
+  //           console.log('socket send error: ', error)
+  //       })
+  //     },
+  //     setReceiver: callback => {
+  //       socket.onmessage = ({data}) => {
+  //         if(callback)
+  //           callback(data)
+  //       }
+  //     }
+  //   }
+  // }
 
   function createMockWorkerPair() {
     const a = {
@@ -115,5 +114,5 @@ define([
     return [a, b]
   }
 
-  return {WebWorkerMessenger, createMockWorkerPair, WebWorkerChannelMessenger}
+  return {createMockWorkerPair, WebWorkerChannelMessenger}
 })

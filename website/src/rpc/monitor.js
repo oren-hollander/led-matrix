@@ -3,33 +3,82 @@
 define([
   'lodash',
   'rpc/messages',
-  'serialization/serialize'
+  'serialization/serialize',
+  'rpc/messages'
 ], (
   _,
   Messages,
-  {Serializable}
+  {Serializable},
+  {log: logMessage, logGroup, logGroupEnd}
 ) => {
 
-  function ConsoleMonitor(name){
+  const ConsoleLogger = {
+    log: console.log,
+    group: console.groupCollapsed,
+    groupEnd: console.groupEnd
+  }
 
-    if(!console.groupCollapsed){
-      const log = console.log
-      let pad = 0
-      const padString = () => _.map(new Array(pad), () => ' ').join('')
+  function NodeConsoleLogger() {
 
-      console.groupCollapsed = (...args) => {
-        console.log(...args)
-        pad += 2
-      }
+    let pad = 0
 
-      console.log = (firstArg, ...args) => {
-        log(padString() + firstArg, ...args)
-      }
+    const padString = () => _.map(new Array(pad), () => ' ').join('')
 
-      console.groupEnd = () => {
-        pad -= 2
+    function log(message) {
+      console.log(padString() + message)
+    }
+
+    function group(message) {
+      log(message)
+      pad += 2
+    }
+
+    function groupEnd() {
+      pad -= 2
+    }
+
+    return {log, group, groupEnd}
+  }
+
+  const LogMessages = {
+    Log: 0,
+    LogGroup: 1,
+    LogGroupEnd: 2
+  }
+  function LocalLogger(logger) {
+    return (message) => {
+      switch (message.op) {
+        case LogMessages.Log:
+          logger.log(message.message)
+          break
+        case LogMessages.LogGroup:
+          logger.group(message.message)
+          break
+        case LogMessages.LogGroupEnd:
+          logger.groupEnd()
+          break
       }
     }
+  }
+
+  function RemoteLogger(channel) {
+
+    function log(message) {
+      channel.send({op: LogMessages.Log, message})
+    }
+
+    function group(message) {
+      channel.send({op: LogMessages.LogGroup, message})
+    }
+
+    function groupEnd() {
+      channel.send({op: LogMessages.LogGroupEnd})
+    }
+
+    return {log, group, groupEnd}
+  }
+
+  function RpcMonitor(name, logger){
 
     const start = Date.now()
 
@@ -76,113 +125,113 @@ define([
     const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
         const initMessage = prefix(`${direction} Init`)
-        console.log(`${initMessage} ${refIdLabel(message.rootRef)}]`)
+        logger.log(`${initMessage} ${refIdLabel(message.rootRef)}]`)
       },
       [Messages.Types.Batch]: (message, direction) => {
-        console.groupCollapsed(prefix(batchLabel(direction, message.rpcMessages)))
+        logger.group(prefix(batchLabel(direction, message.rpcMessages)))
         _.forEach(message.rpcMessages, log)
-        console.groupEnd()
+        logger.groupEnd()
       },
       [Messages.Types.ReleaseProxy]: (message, direction) => {
-        console.log(prefix(`${direction} Release Proxy ${refIdLabel(message.ref)}`))
+        logger.log(prefix(`${direction} Release Proxy ${refIdLabel(message.ref)}`))
       },
       [Messages.Types.ReleaseStub]: (message, direction) => {
-        console.log(prefix(`${direction} Release Stub ${refIdLabel(message.ref)}`))
+        logger.log(prefix(`${direction} Release Stub ${refIdLabel(message.ref)}`))
       },
       [Messages.Types.ApiCall]: message => {
-        console.groupCollapsed(`${rpcLabel(message)} ${message.func}`)
-        console.log(`ID: ${message.id}`)
-        console.log(`Ref: ${message.ref}`)
-        console.log(`Function: ${message.func}`)
+        logger.group(`${rpcLabel(message)} ${message.func}`)
+        logger.log(`ID: ${message.id}`)
+        logger.log(`Ref: ${message.ref}`)
+        logger.log(`Function: ${message.func}`)
         if(message.args.length > 0){
-          console.groupCollapsed(`Arguments`)
+          logger.group(`Arguments`)
           _.forEach(message.args, log)
-          console.groupEnd()
+          logger.groupEnd()
         }
         else{
-          console.log(`No arguments`)
+          logger.log(`No arguments`)
         }
-        console.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
-        console.groupEnd()
+        logger.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
+        logger.groupEnd()
       },
       [Messages.Types.FunctionCall]: message => {
-        console.groupCollapsed(`${rpcLabel(message)}`)
-        console.log(`ID: ${message.id}`)
-        console.log(`Ref: ${message.ref}`)
+        logger.group(`${rpcLabel(message)}`)
+        logger.log(`ID: ${message.id}`)
+        logger.log(`Ref: ${message.ref}`)
         if(message.args.length > 0){
-          console.groupCollapsed(`Arguments`)
+          logger.group(`Arguments`)
           _.forEach(message.args, log)
-          console.groupEnd()
+          logger.groupEnd()
         }
         else{
-          console.log(`No arguments`)
+          logger.log(`No arguments`)
         }
-        console.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
-        console.groupEnd()
+        logger.log(`Return priority: ${priorityLabel(message.returnPriority)}`)
+        logger.groupEnd()
       },
       [Messages.Types.Return]: message => {
-        console.groupCollapsed(rpcLabel(message))
-        console.log(`ID: ${message.id}`)
-        console.log(`Ref: ${message.ref}`)
+        logger.group(rpcLabel(message))
+        logger.log(`ID: ${message.id}`)
+        logger.log(`Ref: ${message.ref}`)
         log(message.value)
         if(message.callTimestamp)
-          console.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
-        console.groupEnd()
+          logger.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
+        logger.groupEnd()
       },
       [Messages.Types.Error]: message => {
-        console.groupCollapsed(rpcLabel(message))
-        console.log(`ID: ${message.id}`)
-        console.log(`Ref: ${message.ref}`)
-        console.log(`Error: ${message.error}`)
+        logger.group(rpcLabel(message))
+        logger.log(`ID: ${message.id}`)
+        logger.log(`Ref: ${message.ref}`)
+        logger.log(`Error: ${message.error}`)
         if(message.callTimestamp)
-          console.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
-        console.groupEnd()
+          logger.log(`Duration: ${duration(message.ts  - message.callTimestamp)}`)
+        logger.groupEnd()
       },
       [Messages.Types.ProxyPropertyUpdate]: message => {
-        console.groupCollapsed(rpcLabel(message))
-        console.log(`Ref: ${message.ref}`)
-        console.log(`Property: ${message.prop}`)
-        console.log(`Value: ${message.value}`)
-        console.groupEnd()
+        logger.group(rpcLabel(message))
+        logger.log(`Ref: ${message.ref}`)
+        logger.log(`Property: ${message.prop}`)
+        logger.log(`Value: ${message.value}`)
+        logger.groupEnd()
       },
       [Messages.Types.StubPropertyUpdate]: message => {
-        console.groupCollapsed(rpcLabel(message))
-        console.log(`Ref: ${message.ref}`)
-        console.log(`Property: ${message.prop}`)
-        console.log(`Value: ${message.value}`)
-        console.groupEnd()
+        logger.group(rpcLabel(message))
+        logger.log(`Ref: ${message.ref}`)
+        logger.log(`Property: ${message.prop}`)
+        logger.log(`Value: ${message.value}`)
+        logger.groupEnd()
       },
       [Messages.Types.Value]: message => {
         if(message.value === undefined)
-          console.log('No value')
+          logger.log('No value')
         else if(message.value[Serializable])
-          console.log(`Value serialized with '${message.value[Serializable]}' serializer`)
+          logger.log(`Value serialized with '${message.value[Serializable]}' serializer`)
         else
-          console.log(`Value: ${message.value}`)
+          logger.log('Value: ', message.value)
       },
       [Messages.Types.Api]: message => {
-        console.groupCollapsed(`Api: ${refIdLabel(message.ref)}`)
-        console.log(`Ref: ${message.ref}`)
+        logger.group(`Api: ${refIdLabel(message.ref)}`)
+        logger.log(`Ref: ${message.ref}`)
 
         if(message.functionNames.length > 0){
-          console.log(`Functions: ${message.functionNames.join()}`)
+          logger.log(`Functions: ${message.functionNames.join()}`)
         }
         else {
-          console.log('No functions')
+          logger.log('No functions')
         }
 
-        console.groupEnd()
+        logger.groupEnd()
       },
       [Messages.Types.Function]: message => {
-        console.groupCollapsed(`Function: ${refIdLabel(message.ref)}`)
-        console.log(`Ref: ${message.ref}`)
-        console.groupEnd()
+        logger.group(`Function: ${refIdLabel(message.ref)}`)
+        logger.log(`Ref: ${message.ref}`)
+        logger.groupEnd()
       },
       [Messages.Types.SharedObject]: message => {
-        console.groupCollapsed(`Shared Object: ${refIdLabel(message.ref)}`)
-        console.log(`Ref: ${message.ref}`)
-        console.log(`Properties: ${JSON.stringify(message.properties)}`)
-        console.groupEnd()
+        logger.group(`Shared Object: ${refIdLabel(message.ref)}`)
+        logger.log(`Ref: ${message.ref}`)
+        logger.log(`Properties: ${JSON.stringify(message.properties)}`)
+        logger.groupEnd()
       }
     }
 
@@ -191,17 +240,17 @@ define([
     }
 
     function queueMessage(rpcMessage) {
-      console.groupCollapsed(prefix(`Add To Queue ~ ${rpcLabel(rpcMessage)}`))
+      logger.group(prefix(`Add To Queue ~ ${rpcLabel(rpcMessage)}`))
       log(rpcMessage, '')
-      console.groupEnd()
+      logger.groupEnd()
     }
 
     function drainMessageQueue(rpcMessages) {
-      console.groupCollapsed(prefix(`Drain Queue ~ ${rpcLabels(rpcMessages)}`))
+      logger.group(prefix(`Drain Queue ~ ${rpcLabels(rpcMessages)}`))
       rpcMessages.forEach(rpcMessage => {
         log(rpcMessage, '')
       })
-      console.groupEnd()
+      logger.groupEnd()
     }
 
     function outgoingMessage(message){
@@ -221,7 +270,7 @@ define([
     return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage, serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation}
   }
 
-  function StatsMonitor(name){
+  function StatsMonitor(name, logger){
     let stats
 
     function init() {
@@ -322,99 +371,144 @@ define([
     }
 
     const percent = n => `${Math.floor(n * 10000) / 100}%`
-    // const percent = n => n
 
     function log(){
-      console.log(name)
-      console.groupCollapsed('Messages')
-      console.log(`Outgoing: ${stats.outgoingMessages}`)
-      console.log(`Incoming: ${stats.incomingMessages}`)
+      logger.log(name)
+      logger.group('Messages')
+      logger.log(`Outgoing: ${stats.outgoingMessages}`)
+      logger.log(`Incoming: ${stats.incomingMessages}`)
 
-      console.groupCollapsed('API calls')
-      console.log(`Outgoing: ${stats.outgoingApiCalls}`)
-      console.log(`Incoming: ${stats.incomingApiCalls}`)
-      console.groupEnd()
-      console.groupCollapsed('Function calls')
-      console.log(`Outgoing: ${stats.outgoingFunctionCalls}`)
-      console.log(`Incoming: ${stats.incomingFunctionCalls}`)
-      console.groupEnd()
-      console.groupCollapsed('Returns')
-      console.log(`Outgoing: ${stats.outgoingReturns}`)
-      console.log(`Incoming: ${stats.incomingReturns}`)
-      console.groupEnd()
-      console.groupCollapsed('Errors')
-      console.log(`Outgoing: ${stats.outgoingErrors}`)
-      console.log(`Incoming: ${stats.incomingErrors}`)
-      console.groupEnd()
-      console.groupCollapsed('Proxy Property Updates')
-      console.log(`Outgoing: ${stats.outgoingProxyPropertyUpdates}`)
-      console.log(`Incoming: ${stats.incomingProxyPropertyUpdates}`)
-      console.groupEnd()
-      console.groupCollapsed('Stub Property Updates')
-      console.log(`Outgoing: ${stats.outgoingStubPropertyUpdate}`)
-      console.log(`Incoming: ${stats.incomingStubPropertyUpdate}`)
-      console.groupEnd()
+      logger.group('API calls')
+      logger.log(`Outgoing: ${stats.outgoingApiCalls}`)
+      logger.log(`Incoming: ${stats.incomingApiCalls}`)
+      logger.groupEnd()
+      logger.group('Function calls')
+      logger.log(`Outgoing: ${stats.outgoingFunctionCalls}`)
+      logger.log(`Incoming: ${stats.incomingFunctionCalls}`)
+      logger.groupEnd()
+      logger.group('Returns')
+      logger.log(`Outgoing: ${stats.outgoingReturns}`)
+      logger.log(`Incoming: ${stats.incomingReturns}`)
+      logger.groupEnd()
+      logger.group('Errors')
+      logger.log(`Outgoing: ${stats.outgoingErrors}`)
+      logger.log(`Incoming: ${stats.incomingErrors}`)
+      logger.groupEnd()
+      logger.group('Proxy Property Updates')
+      logger.log(`Outgoing: ${stats.outgoingProxyPropertyUpdates}`)
+      logger.log(`Incoming: ${stats.incomingProxyPropertyUpdates}`)
+      logger.groupEnd()
+      logger.group('Stub Property Updates')
+      logger.log(`Outgoing: ${stats.outgoingStubPropertyUpdate}`)
+      logger.log(`Incoming: ${stats.incomingStubPropertyUpdate}`)
+      logger.groupEnd()
 
-      console.groupEnd()
+      logger.groupEnd()
 
-      console.groupCollapsed('Queue')
-      console.log(`${stats.queuedMessages} messages queued`)
-      console.log(`${stats.queueDrains} messages drained`)
-      console.groupEnd()
+      logger.group('Queue')
+      logger.log(`${stats.queuedMessages} messages queued`)
+      logger.log(`${stats.queueDrains} messages drained`)
+      logger.groupEnd()
 
-      console.groupCollapsed('Buffers')
-      console.log(`${stats.buffers.length} buffers allocated`)
-      console.log(`Average buffer size: ${_.sumBy(stats.buffers, 'size') / stats.buffers.length}`)
-      console.log(`Average buffer utilization: ${percent(_.sumBy(stats.buffers, buf => (buf.size - buf.available) / buf.size) / stats.buffers.length)}`)
-      console.groupCollapsed('Details')
+      logger.group('Buffers')
+      logger.log(`${stats.buffers.length} buffers allocated`)
+      logger.log(`Average buffer size: ${_.sumBy(stats.buffers, 'size') / stats.buffers.length}`)
+      logger.log(`Average buffer utilization: ${percent(_.sumBy(stats.buffers, buf => (buf.size - buf.available) / buf.size) / stats.buffers.length)}`)
+      logger.group('Details')
       _.forEach(stats.buffers, buffer => {
-        console.log(`Size: ${buffer.size}, Available: ${buffer.available}, Utilization: ${percent((buffer.size - buffer.available) / buffer.size)}`)
+        logger.log(`Size: ${buffer.size}, Available: ${buffer.available}, Utilization: ${percent((buffer.size - buffer.available) / buffer.size)}`)
       })
-      console.groupEnd()
-      console.groupEnd()
+      logger.groupEnd()
+      logger.groupEnd()
 
-      console.groupCollapsed('Serializations')
-      console.log(`Serializations: ${stats.serializations.length}`)
-      console.log(`Average serialization time: ${_.sum(stats.serializations) / stats.serializations.length} ms`)
-      console.log(`Deserializations: ${stats.deserializations.length}`)
-      console.log(`Average deserialization time: ${_.sum(stats.deserializations) / stats.deserializations.length} ms`)
-      console.groupEnd()
+      logger.group('Serializations')
+      logger.log(`Serializations: ${stats.serializations.length}`)
+      logger.log(`Average serialization time: ${_.sum(stats.serializations) / stats.serializations.length} ms`)
+      logger.log(`Deserializations: ${stats.deserializations.length}`)
+      logger.log(`Average deserialization time: ${_.sum(stats.deserializations) / stats.deserializations.length} ms`)
+      logger.groupEnd()
     }
 
     return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage,
       serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation, log, stats: getStats, clear: init}
   }
 
-  function ConsoleWithStatsMonitor(name, delay){
-    const consoleMonitor = ConsoleMonitor(name)
-    const statsMonitor = StatsMonitor()
+  // function ConsoleWithStatsMonitor(name, delay){
+  //   const consoleMonitor = ConsoleMonitor(name)
+  //   const statsMonitor = StatsMonitor()
+  //
+  //   function queueMessage(rpcMessage) {
+  //     consoleMonitor.queueMessage(rpcMessage)
+  //     statsMonitor.queueMessage(rpcMessage)
+  //   }
+  //
+  //   function drainMessageQueue(rpcMessages) {
+  //     consoleMonitor.drainMessageQueue(rpcMessages)
+  //     statsMonitor.drainMessageQueue(rpcMessages)
+  //   }
+  //
+  //   function outgoingMessage(message){
+  //     consoleMonitor.outgoingMessage(message)
+  //     statsMonitor.outgoingMessage(message)
+  //   }
+  //
+  //   function incomingMessage(message){
+  //     consoleMonitor.incomingMessage(message)
+  //     statsMonitor.incomingMessage(message)
+  //   }
+  //
+  //   setInterval(() => {
+  //     console.log(name, 'stats', statsMonitor.stats())
+  //   }, delay)
+  //
+  //   return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage}
+  // }
 
-    function queueMessage(rpcMessage) {
-      consoleMonitor.queueMessage(rpcMessage)
-      statsMonitor.queueMessage(rpcMessage)
+  function DevToolsMonitor(name){
+    window.__RPC_DEVTOOLS_LOG__ = []
+
+    function log(entry) {
+      window.__RPC_DEVTOOLS_LOG__.push(`${name} - ${entry}`)
     }
 
-    function drainMessageQueue(rpcMessages) {
-      consoleMonitor.drainMessageQueue(rpcMessages)
-      statsMonitor.drainMessageQueue(rpcMessages)
+    function queueMessage(){
+      log('queue')
     }
 
-    function outgoingMessage(message){
-      consoleMonitor.outgoingMessage(message)
-      statsMonitor.outgoingMessage(message)
+    function drainMessageQueue(){
+      log('drain')
     }
 
-    function incomingMessage(message){
-      consoleMonitor.incomingMessage(message)
-      statsMonitor.incomingMessage(message)
+    function outgoingMessage(){
+      log('out message')
     }
 
-    setInterval(() => {
-      console.log(name, 'stats', statsMonitor.stats())
-    }, delay)
+    function incomingMessage(){
+      log('in message')
+    }
 
-    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage}
+    function serializeStart(){
+      log('serialize start')
+    }
+
+    function serializeEnd(){
+      log('serialize end')
+    }
+
+    function deserializeStart(){
+      log('deserialize end')
+    }
+
+    function deserializeEnd(){
+      log('deserialize end')
+    }
+
+    function bufferAllocation(){
+      log('buffer allocation')
+    }
+
+    return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage, serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation}
   }
 
-  return {ConsoleMonitor, StatsMonitor, ConsoleWithStatsMonitor}
+  return {RpcMonitor, StatsMonitor, DevToolsMonitor, ConsoleLogger, NodeConsoleLogger, RemoteLogger, LocalLogger}
 })

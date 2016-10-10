@@ -1,0 +1,7 @@
+{
+  "name": "roro.js",
+  "version": "1.0",
+  "description": "roro.js Chrome DevTools Extension",
+  "devtools_page": "devtools.html",
+  "manifest_version": 2
+}

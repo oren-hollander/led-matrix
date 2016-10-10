@@ -275,8 +275,6 @@ define([
  ==============
  . support ArrayBuffer passing by ref
  . binary serialization with debug info
- . release refs / garbage collection for stubs
  . stress test and compare [proto | native | json] serializers
- . Custom serializer should report size
- . Add single buffer serializer with auto measure
+ . use the same ref ids for proxies and stubs so releasing them is uniform
  */

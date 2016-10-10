@@ -17,7 +17,7 @@ define([], () => {
     Value: 'value',
     Api: 'api',
     Function: 'function',
-    SharedObject: 'shared-object'
+    SharedObject: 'shared-object',
   }
 
   const rpcMessage = (type, args) => Object.assign({type}, args)
@@ -32,8 +32,7 @@ define([], () => {
   const rpcFunction = ref => ({type: MessageTypes.Function, ref})
   const rpcSharedObject = (ref, properties) => ({type: MessageTypes.SharedObject, properties, ref})
 
-  const rpcApiCall = (id, ref, func, args, returnPriority) =>
-    rpcMessage(MessageTypes.ApiCall, {id, ref, func, args, returnPriority})
+  const rpcApiCall = (id, ref, func, args, returnPriority) => rpcMessage(MessageTypes.ApiCall, {id, ref, func, args, returnPriority})
   const rpcFunctionCall = (id, ref, args, returnPriority) => rpcMessage(MessageTypes.FunctionCall, {id, ref, args, returnPriority})
   const rpcReturn = (id, ref, value) => rpcMessage(MessageTypes.Return, {id, ref, value})
 
@@ -49,8 +48,10 @@ define([], () => {
   const isProxyPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.ProxyPropertyUpdate
   const isStubPropertyUpdate = rpcMessage => rpcMessage.type === MessageTypes.StubPropertyUpdate
 
-  return {Types: MessageTypes, init, batch, releaseProxy, releaseStub,
+  return {
+    Types: MessageTypes, init, batch, releaseProxy, releaseStub,
     rpcApiCall, rpcFunctionCall, rpcReturn, rpcError, rpcStubPropertyUpdate, rpcProxyPropertyUpdate,
     rpcValue, rpcApi, rpcFunction, rpcSharedObject,
-    isApiCall, isFunctionCall, isReturn, isError, isProxyPropertyUpdate, isStubPropertyUpdate}
+    isApiCall, isFunctionCall, isReturn, isError, isProxyPropertyUpdate, isStubPropertyUpdate
+  }
 })

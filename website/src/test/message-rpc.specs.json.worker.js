@@ -14,13 +14,15 @@ require([
   'rpc/message-rpc',
   'rpc/remote',
   'rpc/messenger',
-  'serialization/json-serializer'
+  'serialization/json-serializer',
+  'rpc/monitor'
 ], (
   _,
   MessageRPC,
   {RemoteApi},
   {WebWorkerChannelMessenger},
-  JsonSerializer
+  JsonSerializer,
+  {RpcMonitor, ConsoleLogger, RemoteLogger}
 ) => {
 
   const api = {
@@ -31,7 +33,8 @@ require([
 
   WebWorkerChannelMessenger(self).then(messenger => {
     const channel = messenger.createChannel(1)
-    MessageRPC(channel, JsonSerializer).then(rpc => {
+    const debugChannel = messenger.createChannel(2)
+    MessageRPC(channel, JsonSerializer, RpcMonitor('Worker', RemoteLogger(debugChannel))).then(rpc => {
       rpc.connect(RemoteApi(api))
     })
   })
