@@ -21,7 +21,7 @@ define([
   SharedObjectProxy,
   NativeSerializer,
   JsonSerializer,
-  BinarySerializer,
+  {BinaryMultiBufferSerializer},
   {Serializable},
   {ConsoleMonitor, StatsMonitor},
   ImageSerializer,
@@ -241,7 +241,7 @@ define([
         var statsMonitor = StatsMonitor('Stats');
         WebWorkerChannelMessenger(worker).then(messenger => {
           const channel = messenger.createChannel(1)
-          MessageRPC(channel, BinarySerializer({Image: ImageSerializer}, statsMonitor), statsMonitor)
+          MessageRPC(channel, BinaryMultiBufferSerializer({Image: ImageSerializer}, statsMonitor), statsMonitor)
             .then(connect).then(api => {
             console.time('binary')
             megaPixelImage[Serializable] = 'Image'

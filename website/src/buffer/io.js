@@ -24,42 +24,42 @@ define([], () => {
     return join(0, chars.length - 1)
   }
 
-  function DataWriter(serialWriter) {
+  function DataWriter(writer) {
     const stringWriter = {
       string: s => {
-        serialWriter.uint32(s.length)
-        _(s).map(toChatCode).forEach(serialWriter.uint16)
+        writer.uint32(s.length)
+        _(s).map(toChatCode).forEach(writer.uint16)
       },
       ascii: s => {
-        serialWriter.uint32(s.length)
-        _(s).map(toChatCode).forEach(serialWriter.uint8)
+        writer.uint32(s.length)
+        _(s).map(toChatCode).forEach(writer.uint8)
       }
     }
 
-    return _.assign(serialWriter, stringWriter)
+    return _.assign(writer, stringWriter)
   }
 
-  function DataReader(serialReader) {
+  function DataReader(writer) {
     const stringReader = {
       string: () => {
-        const length = serialReader.uint32()
+        const length = writer.uint32()
         let chars = new Array(length)
         for (let i = 0; i < length; i++) {
-          chars[i] = serialReader.uint16()
+          chars[i] = writer.uint16()
         }
         return fastJoin(chars)
       },
       ascii: () => {
-        const length = serialReader.uint32()
+        const length = writer.uint32()
         let chars = new Array(length)
         for (let i = 0; i < length; i++) {
-          chars[i] = serialReader.uint8()
+          chars[i] = writer.uint8()
         }
         return fastJoin(chars)
       }
     }
 
-    return _.assign(serialReader, stringReader)
+    return _.assign(writer, stringReader)
   }
 
   return {DataWriter, DataReader}

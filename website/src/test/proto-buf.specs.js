@@ -8,7 +8,7 @@ define([
   protocolCodec
 ) => {
 
-  describe('Protocol Buffers', function () {
+  xdescribe('Protocol Buffers', function () {
 
     it('int8', () => {
       const protocol = {myInt: 'int8'}

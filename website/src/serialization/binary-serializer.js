@@ -5,6 +5,7 @@ define([
   'util/enum',
   'rpc/messages',
   'buffer/serial-buffer',
+  'buffer/buffer',
   'buffer/io',
   'serialization/serialize'
 ], (
@@ -12,6 +13,7 @@ define([
   Enum,
   Messages,
   {SerialBufferWriter, SerialBufferReader},
+  {BufferWriter, BufferReader, BufferSizeWriter},
   {DataWriter, DataReader},
   {Serializable}
 ) => {
@@ -29,6 +31,7 @@ define([
     Messages.Types.Function,
     Messages.Types.SharedObject
   ])
+
   function BinarySerializer(valueSerializers, monitor) {
     const valueSerializerCodes = Enum(_(valueSerializers).keys().sortBy().value())
 
@@ -358,40 +361,103 @@ define([
       return Messages.rpcSharedObject(reader.uint32(), JSON.parse(reader.string()))
     }
 
-    return {
-      serialize: value => {
-        const writer = DataWriter(SerialBufferWriter())
-        writer.uint8(MessageTypeCodes.value(value.type))
-        switch (value.type) {
-          case Messages.Types.Init:
-            writeInit(writer, value)
-            break
-          case Messages.Types.Batch:
-            writeBatch(writer, value)
-            break
-          default:
-            throw new Error(`unknown message type ${value.type}`)
-        }
-
-        if(monitor)
-          monitor.bufferAllocation(writer.size(), writer.available())
-
-        return writer.buffers
-      },
-      deserialize: value => {
-        const reader = DataReader(SerialBufferReader(value))
-
-        switch (MessageTypeCodes.name(reader.uint8())) {
-          case Messages.Types.Init:
-            return readInit(reader)
-          case Messages.Types.Batch:
-            return readBatch(reader);
-          default:
-            throw new Error(`unknown message type ${value.type}`)
-        }
+    function writeMessage(writer, message){
+      writer.uint8(MessageTypeCodes.value(message.type))
+      switch (message.type) {
+        case Messages.Types.Init:
+          writeInit(writer, message)
+          break
+        case Messages.Types.Batch:
+          writeBatch(writer, message)
+          break
+        default:
+          throw new Error(`unknown message type ${message.type}`)
       }
     }
+
+    function readMessage(reader) {
+      switch (MessageTypeCodes.name(reader.uint8())) {
+        case Messages.Types.Init:
+          return readInit(reader)
+        case Messages.Types.Batch:
+          return readBatch(reader);
+        default:
+          throw new Error(`unknown message type ${value.type}`)
+      }
+    }
+
+    // function serializeSingleBuffer(value) {
+    //   const sizeWriter = DataWriter(BufferSizeWriter())
+    //   writeMessage(sizeWriter, value)
+    //   const buffer = new ArrayBuffer(sizeWriter.size())
+    //   const writer = DataWriter(BufferWriter(buffer))
+    //   writeMessage(writer, value)
+    //   return buffer
+    // }
+    //
+    // function deserializeSingleBuffer(buffer) {
+    //   const reader = DataReader(BufferReader(buffer))
+    //   return readMessage(reader)
+    // }
+    //
+    // function serialize(value) {
+    //   const writer = DataWriter(SerialBufferWriter())
+    //   writeMessage(writer, value)
+    //   if(monitor)
+    //     monitor.bufferAllocation(writer.size(), writer.available())
+    //
+    //   return writer.buffers
+    // }
+    //
+    // function deserialize(value) {
+    //   const reader = DataReader(SerialBufferReader(value))
+    //   return readMessage(reader)
+    // }
+
+    // return {serialize: serializeSingleBuffer, deserialize: deserializeSingleBuffer}
+    // return {serialize, deserialize}
+    return {writeMessage, readMessage}
   }
 
-  return BinarySerializer
+  function BinarySingleBufferSerializer(valueSerializers, monitor) {
+    const serializer = BinarySerializer(valueSerializers, monitor)
+
+    serializer.serialize = value => {
+      const sizeWriter = DataWriter(BufferSizeWriter())
+      serializer.writeMessage(sizeWriter, value)
+      const buffer = new ArrayBuffer(sizeWriter.size())
+      const writer = DataWriter(BufferWriter(buffer))
+      serializer.writeMessage(writer, value)
+      return buffer
+    }
+
+    serializer.deserialize = buffer => {
+      const reader = DataReader(BufferReader(buffer))
+      return serializer.readMessage(reader)
+    }
+
+    return serializer
+  }
+
+  function BinaryMultiBufferSerializer(valueSerializers, monitor) {
+    const serializer = BinarySerializer(valueSerializers, monitor)
+
+    serializer.serialize = value => {
+      const writer = DataWriter(SerialBufferWriter())
+      serializer.writeMessage(writer, value)
+      if(monitor)
+        monitor.bufferAllocation(writer.size(), writer.available())
+
+      return writer.buffers
+    }
+
+    serializer.deserialize = buffers => {
+      const reader = DataReader(SerialBufferReader(buffers))
+      return serializer.readMessage(reader)
+    }
+
+    return serializer
+  }
+
+  return {BinarySingleBufferSerializer, BinaryMultiBufferSerializer}
 })

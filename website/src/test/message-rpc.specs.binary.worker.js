@@ -21,13 +21,13 @@ require([
   MessageRPC,
   {RemoteApi},
   {WebWorkerChannelMessenger},
-  BinarySerializer,
+  {BinaryMultiBufferSerializer},
   ImageSerializer
 ) => {
 
   WebWorkerChannelMessenger(self).then(messenger => {
     const channel = messenger.createChannel(1)
-    MessageRPC(channel, BinarySerializer({Image: ImageSerializer})).then(rpc => {
+    MessageRPC(channel, BinaryMultiBufferSerializer({Image: ImageSerializer})).then(rpc => {
       const api = {
         imageSize: image => {
           return image.length

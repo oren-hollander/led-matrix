@@ -1,16 +1,11 @@
 'use strict'
 
-define([
-  'lodash'
-], (
-  _
-) => {
+define([], () => {
 
   const linearGrowth = size => () => size
-
   const exponentialGrowth = (min, max, factor) => size => Math.max(min, Math.min(size * factor, max))
 
-  function SerialBufferWriter(growth = exponentialGrowth(1024, 65536 * 4, 2)) {
+  function SerialBufferWriter(growth = exponentialGrowth(1024, 65536, 2)) {
 
     const buffers = []
     let offset
@@ -141,17 +136,9 @@ define([
         var value = view.getFloat64(offset)
         offset += 8
         return value
-      },
-      peekUint8: () => {
-        if (available() >= 1) {
-          return view.getUint8(offset)
-        }
-        else {
-          return new DataView(buffers[bufferIndex + 1]).getUint8(0)
-        }
       }
     }
   }
 
-  return {SerialBufferWriter, SerialBufferReader}
+  return {SerialBufferWriter, SerialBufferReader, linearGrowth, exponentialGrowth}
 })

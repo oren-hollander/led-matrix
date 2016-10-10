@@ -9,14 +9,14 @@ define([
 ], (
   _,
   {Serializable},
-  BinarySerializer,
+  {BinaryMultiBufferSerializer, BinarySingleBufferSerializer},
   ImageSerializer,
   Messages
 ) => {
   describe('Binary Serializer', () =>  {
 
     it('should serialize a custom type', () => {
-      const serializer = BinarySerializer({Image: ImageSerializer})
+      const serializer = BinaryMultiBufferSerializer({Image: ImageSerializer})
 
       const image = new Array(10)
 
@@ -38,7 +38,7 @@ define([
     })
 
     it('should serialize an undefined return value', () => {
-      const serializer = BinarySerializer()
+      const serializer = BinarySingleBufferSerializer()
       const message = Messages.batch([
         Messages.rpcReturn(1, 1, Messages.rpcValue(undefined))
       ])
@@ -47,7 +47,6 @@ define([
       const message2 = serializer.deserialize(buffers)
       console.log(message, message2)
       expect(message).toEqual(message2)
-
     })
   })
 })
