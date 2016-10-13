@@ -22,14 +22,16 @@ requirejs([
   'rpc/remote',
   'rpc/messenger',
   'rpc/monitor',
-  'serialization/json-serializer'
+  'serialization/json-serializer',
+  'util/relay'
 ], (
   _,
   MessageRpc,
   {RemoteApi},
-  {WebSocketMessenger},
-  {ConsoleMonitor},
-  Serializer
+  {WebSocketChannelMessenger},
+  {RpcMonitor, NodeConsoleLogger},
+  JsonSerializer,
+  Relay
 ) => {
 
   //////////////////////////////////////
@@ -105,26 +107,39 @@ requirejs([
     })
   })
 
-  let devices = []
+  let stations = {}
 
   const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
 
-  const serverApi = {
-    connectPad: (stationDeviceId, padApi) => {
-      if(devices[stationDeviceId]) {
-        return devices[stationDeviceId].connectPad(RemoteApi(padApi)).then(api => RemoteApi(api))
-      }
-      else {
-        throw `can't find station '${stationDeviceId}'`
-      }
-    }
-  }
-
   function createRpcChannel(socket){
-    MessageRpc(RemoteApi(serverApi), WebSocketMessenger(socket), Serializer, ConsoleMonitor('server')).then(({api: device}) => {
-      const deviceId = uniqueDeviceId()
-      devices[deviceId] = RemoteApi(device)
-      device.setDeviceId(deviceId)
+    WebSocketChannelMessenger(socket).then(messenger => {
+      const channel = messenger.createChannel(1)
+      MessageRpc(channel, JsonSerializer, RpcMonitor('server', NodeConsoleLogger())).then(rpc => {
+
+        const serverApi = {
+          registerStation: station => {
+            const stationId = uniqueDeviceId()
+            stations[stationId] = {api: station, messenger}
+            return stationId
+          },
+          connectPad: stationId => {
+            if(!stations[stationId]) {
+              throw new Error(`Can't connect to station '${stationId}'`)
+            }
+            else {
+              return stations[stationId].api.createPadChannel().then(padChannelNumber => {
+                const padChannel = messenger.createChannel(padChannelNumber)
+                const stationChannel = stations[stationId].messenger.createChannel(padChannelNumber)
+                Relay(padChannel, stationChannel)
+                stations[stationId].api.connectPad(padChannelNumber)
+                return padChannelNumber
+              })
+            }
+          }
+        }
+
+        rpc.connect(RemoteApi(serverApi))
+      })
     })
   }
 })

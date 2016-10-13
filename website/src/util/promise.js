@@ -1,6 +1,18 @@
 'use strict'
 
 define(['lodash'], (_) => {
+  const createPromise = () => {
+
+    const settleFunctions = {}
+
+    const promise = new Promise((resolve, reject) => {
+      settleFunctions.resolve = resolve
+      settleFunctions.reject = reject
+    })
+
+    return Object.assign(promise, settleFunctions)
+  }
+
   const createPromiseWithSettler = () => {
     let resolve = undefined
     let reject = undefined
@@ -35,5 +47,5 @@ define(['lodash'], (_) => {
     })
   }
 
-  return {createPromiseWithSettler, promisifyFunction, promisifyApi}
+  return {createPromiseWithSettler, createPromise, promisifyFunction, promisifyApi}
 })

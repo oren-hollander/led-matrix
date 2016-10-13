@@ -62,48 +62,4 @@ define([], () => {
     }
   }
 
-  function Component(w, h, painter){
-
-    const components = []
-
-    function addComponent(component, x, y) {
-      components.push({component, x, y})
-    }
-
-    function paint(ctx) {
-      _.forEach(components, ({component, x, y}) => {
-        ctx.save()
-        ctx.rect(x, y, component.w, component.h)
-        ctx.clip()
-        ctx.translate(x, y)
-        component.paint(ctx)
-        ctx.restore()
-      })
-      if(painter)
-        painter(ctx)
-    }
-
-    return {w, h, paint, addComponent}
-  }
-
-  Component(100, 100, ctx => {
-    ctx.strokeRect(0, 0, 100, 100)
-  })
-
-  // const VStack = components => {
-  //   const width = _.maxBy(components, 'w')
-  //   const height = _.sumBy(components, 'h')
-  //
-  //   const stack = Component(width, height)
-  //   const ys = _(components)
-  //     .map('h')
-  //     .reduce(, ([hs, th], h) => {
-  //       hs.push(th)
-  //       return [hs, th + h]
-  //     }, [[], 0])
-  //     .value()
-  //
-  //
-  //   _(components).zip(ys).forEach(([component, y]) => stack.addComponent(component, 0, y))
-  // }
 })

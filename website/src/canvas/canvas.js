@@ -2,21 +2,23 @@
 
 define([
   'lodash',
-  'util/html'
+  'util/html',
+  'canvas/view',
+  'geometry/geometry'
 ], (
   _,
-  {px}
+  {px},
+  View,
+  {Line, Rect}
 ) => {
 
+  function FullScreenCanvas() {
 
-  function FullScreenCanvas(width, height, fullScreenStateChange) {
-    const div = document.createElement('div')
-    document.body.appendChild(div)
+    let orientation = getScreenOrientation()
 
     const canvas = document.createElement('canvas')
-    div.appendChild(canvas)
+    document.body.appendChild(canvas)
 
-    div.style.minHeight = '100%'
     document.body.parentNode.style.height = '100%'
     document.body.parentNode.style.margin = '0'
     document.body.style.height = '100%'
@@ -29,86 +31,112 @@ define([
     canvas.style.right = '0'
     canvas.style.top = '0'
     canvas.style.bottom = '0'
+    const ctx = canvas.getContext('2d')
 
-    canvas.addEventListener('click', () => {
-      if(!document.webkitFullscreenElement)
+    function isInFullScreen() {
+      return !!document.webkitFullscreenElement
+    }
+
+    function getScreenOrientation() {
+      return window.screen.orientation.type.startsWith('portrait') ? 'portrait' : 'landscape'
+    }
+
+    function requestFullScreen() {
+      if(!isInFullScreen()){
         canvas.webkitRequestFullScreen()
-    })
+      }
+    }
 
-    canvas.width = width
-    canvas.height = height
-    canvas.style.width = px(width / window.devicePixelRatio)
-    canvas.style.height = px(height / window.devicePixelRatio)
+    canvas.addEventListener('click', requestFullScreen)
 
-    document.addEventListener('webkitfullscreenchange', () => {
-      if(fullScreenStateChange){
-        fullScreenStateChange(document.webkitFullscreenElement === undefined)
+    window.screen.orientation.addEventListener('change', () => {
+      if(isInFullScreen()){
+        setCanvasSize()
       }
     })
 
-    return canvas
-    // function showRequestFullScreenMessage() {
-    //   ctx.clearRect(0, 0, canvas.width, canvas.height)
-    //   ctx.lineWidth = 8
-    //   ctx.strokeStyle = '#22AA22'
-    //
-    //   ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8)
-    //
-    //   ctx.fillStyle = '#DD1122'
-    //   ctx.textAlign = 'center'
-    //   ctx.font = "72px sans-serif";
-    //   ctx.fillText('Click here for', 400, 200)
-    //
-    //   ctx.font = "100px sans-serif";
-    //   ctx.fillText('full screen', 400, 400)
-    //
-    //   ctx.fillText(`pix rat: ${window.devicePixelRatio}`, 400, 500)
-    //
-    // }
+    document.addEventListener('webkitfullscreenchange', fullScreenChange)
 
-    // function showSizeError() {
-    //   ctx.clearRect(0, 0, canvas.width, canvas.height)
-    //   ctx.lineWidth = 8
-    //   ctx.strokeStyle = '#22AA22'
-    //
-    //   ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8)
-    //
-    //   ctx.fillStyle = '#DD1122'
-    //   ctx.textAlign = 'center'
-    //   ctx.font = "72px sans-serif";
-    //   ctx.fillText('Window too small !', 400, 200)
-    // }
+    function fullScreenChange() {
+      if(isInFullScreen()) {
+        if(getScreenOrientation() === orientation){
+          setCanvasSize()
+        }
+        window.screen.orientation.lock(orientation)
+      }
+    }
 
+    function setCanvasSize(){
+      canvas.width = screen.width * window.devicePixelRatio
+      canvas.height = screen.height * window.devicePixelRatio
+      canvas.style.width = px(screen.width)
+      canvas.style.height = px(screen.height)
 
-    // showRequestFullScreenMessage()
+      const ctx = canvas.getContext('2d')
+      const view = View(ctx, Rect(0, 0, canvas.width, canvas.height))
 
-    // function pause() {
-    //   paused = true
-    // }
+      view.line(Line(0, 0, canvas.width, canvas.height))
+      view.line(Line(0, canvas.height, canvas.width, 0))
+      view.line(Line(0, canvas.height / 2, canvas.width, canvas.height / 2))
+      view.line(Line(canvas.width / 2, 0, canvas.width / 2, canvas.height))
 
-    // function resume() {
-    //   // if(document.body.clientWidth < width / window.devicePixelRatio || document.body.clientHeight < height / window.devicePixelRatio) {
-    //   //   document.webkitExitFullscreen()
-    //   //   showSizeError()
-    //   // }
-    //   // else {
-    //     paused = false
-    //     setCanvasSize(width, height)
-    //     window.requestAnimationFrame(onAnimationFrame)
-    //   // }
-    // }
-    //
-    // function onAnimationFrame() {
-    //   if(paused) {
-    //     setCanvasSize(800, 600)
-    //     showRequestFullScreenMessage()
-    //   }
-    //   else {
-    //     painter(ctx)
-    //     window.requestAnimationFrame(onAnimationFrame)
-    //   }
-    // }
+      if(component)
+        component.layout(Rect(0, 0, canvas.width, canvas.height))
+    }
+
+    let component
+
+    function setComponent(c) {
+      component = c
+    }
+
+    function paint() {
+      window.requestAnimationFrame(paint)
+
+      if(isInFullScreen()){
+        if(!component)
+          return
+
+        if(!component.shouldPaint || component.shouldPaint()) {
+          component.paint(ctx)
+        }
+      }
+      else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = '#DD1122'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.font = '48px sans-serif'
+        ctx.fillText('Full screen', canvas.width / 2, canvas.height / 2)
+      }
+    }
+
+    window.requestAnimationFrame(paint)
+
+    function setOrientation(o) {
+      orientation = o
+    }
+
+    const handleTouch = e => {
+      if(!isInFullScreen())
+        return
+
+      if(e.cancelable)
+        e.preventDefault()
+
+      if(api.onTouch)
+        api.onTouch(e)
+    }
+
+    canvas.addEventListener('touchstart', handleTouch, false)
+    canvas.addEventListener('touchmove', handleTouch, false)
+    canvas.addEventListener('touchcancel', handleTouch, false)
+    canvas.addEventListener('touchend', handleTouch, false)
+
+    const api = {setComponent, setOrientation, onTouch: undefined}
+
+    return api
   }
 
-  return {FullScreenCanvas}
+  return FullScreenCanvas
 })

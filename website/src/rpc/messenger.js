@@ -58,44 +58,47 @@ define([
     return promise
   }
 
-  // function WebWorkerMessenger(worker) {
-  //   return {
-  //     send: message => {
-  //       if(message instanceof ArrayBuffer){
-  //         worker.postMessage({message}, [message])
-  //       }
-  //       else if (_.isArray(message) && _.every(message, m => m instanceof ArrayBuffer)){
-  //         worker.postMessage({message}, message)
-  //       }
-  //       else {
-  //         worker.postMessage({message})
-  //       }
-  //     },
-  //     setReceiver: callback => {
-  //       worker.onmessage = ({data}) => {
-  //         if(callback)
-  //           callback(data.message)
-  //       }
-  //     }
-  //   }
-  // }
-  //
-  // function WebSocketMessenger(socket) {
-  //   return {
-  //     send: message => {
-  //       socket.send(message, error => {
-  //         if(error)
-  //           console.log('socket send error: ', error)
-  //       })
-  //     },
-  //     setReceiver: callback => {
-  //       socket.onmessage = ({data}) => {
-  //         if(callback)
-  //           callback(data)
-  //       }
-  //     }
-  //   }
-  // }
+  function WebSocketChannelMessenger(socket) {
+    const {promise, resolve} = createPromiseWithSettler()
+
+    let receivers = []
+
+    socket.onmessage = ({data}) => {
+      const message = JSON.parse(data)
+      if(message.channel === 0) {
+        switch(message.message){
+          case 'init':
+            socket.send(JSON.stringify({channel: 0, message: 'init-ack'}))
+          case 'init-ack':
+            resolve({createChannel})
+        }
+      }
+      else {
+        const receiver = receivers[message.channel]
+        if(receiver)
+          receiver(message.message)
+      }
+    }
+
+    socket.send(JSON.stringify({channel: 0, message: 'init'}))
+
+    function createChannel(channel) {
+      if(channel < 1){
+        throw new Error('channel must be a positive integer')
+      }
+
+      return {
+        send: message => {
+          socket.send(JSON.stringify({channel, message}))
+        },
+        setReceiver: callback => {
+          receivers[channel] = callback
+        }
+      }
+    }
+
+    return promise
+  }
 
   function createMockWorkerPair() {
     const a = {
@@ -114,5 +117,5 @@ define([
     return [a, b]
   }
 
-  return {createMockWorkerPair, WebWorkerChannelMessenger}
+  return {createMockWorkerPair, WebWorkerChannelMessenger, WebSocketChannelMessenger}
 })

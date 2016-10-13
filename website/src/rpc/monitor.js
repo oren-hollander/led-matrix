@@ -3,13 +3,11 @@
 define([
   'lodash',
   'rpc/messages',
-  'serialization/serialize',
-  'rpc/messages'
+  'serialization/serialize'
 ], (
   _,
   Messages,
-  {Serializable},
-  {log: logMessage, logGroup, logGroupEnd}
+  {Serializable}
 ) => {
 
   const ConsoleLogger = {

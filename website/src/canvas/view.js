@@ -5,15 +5,14 @@ define([
 ], (
   _
 ) => {
-  function View(canvas, bounds) {
+  function View(ctx, bounds) {
 
-    const ctx = canvas.getContext('2d')
+    const floor = _.partial(_.mapValues, _, Math.floor)
 
-    ctx.rect(bounds.x, bounds.y, bounds.w, bounds.h)
-    ctx.clip()
-    ctx.translate(bounds.x, bounds.y)
+    bounds = floor(bounds)
 
     function line(l) {
+      l = floor(l)
       ctx.beginPath()
       ctx.moveTo(l.x1, l.y1)
       ctx.lineTo(l.x2, l.y2)
@@ -21,12 +20,14 @@ define([
     }
 
     function circle(c) {
+      c = floor(c)
       ctx.beginPath()
       ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI)
       ctx.stroke()
     }
 
     function rect(r) {
+      r = floor(r)
       ctx.strokeRect(r.x, r.y, r.w, r.h)
     }
 
@@ -34,7 +35,11 @@ define([
       ctx.fillText(t, x, y)
     }
 
-    return {line, circle, rect, text}
+    function clear() {
+      ctx.clearRect(bounds.x, bounds.y, bounds.w, bounds.h)
+    }
+
+    return {clear, line, circle, rect, text}
   }
 
   return View
