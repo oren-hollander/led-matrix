@@ -1,23 +1,33 @@
 'use strict'
 
 define([], () => {
-  function Pad() {
-    const api = {
-      onPress: undefined,
-      onRelease: undefined,
+
+  function Pad(buttons) {
+    let station
+
+    const pad = {
       buttonPressed: button => {
-        if(api.onPress){
-          api.onPress(button)
+        if(station){
+          station.onPress(button)
         }
       },
       buttonReleased: button => {
-        if(api.onRelease){
-          api.onRelease(button)
+        if(station){
+          station.onRelease(button)
         }
       },
+
+      createButton: (name, x, y, r, color) => {
+        console.log('createButton', name)
+        buttons.add({name, x, y, r, color, pressed: false})
+      },
+
+      setStation: s => {
+        station = s
+      }
     }
 
-    return api
+    return pad
   }
 
   return Pad

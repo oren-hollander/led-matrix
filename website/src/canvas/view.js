@@ -5,11 +5,9 @@ define([
 ], (
   _
 ) => {
-  function View(ctx, bounds) {
+  function View(ctx) {
 
     const floor = _.partial(_.mapValues, _, Math.floor)
-
-    bounds = floor(bounds)
 
     function line(l) {
       l = floor(l)
@@ -19,27 +17,39 @@ define([
       ctx.stroke()
     }
 
-    function circle(c) {
+    function strokeCircle(c) {
       c = floor(c)
       ctx.beginPath()
       ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI)
       ctx.stroke()
     }
 
-    function rect(r) {
+    function fillCircle(c) {
+      c = floor(c)
+      ctx.beginPath()
+      ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI)
+      ctx.fill()
+    }
+
+    function strokeRect(r) {
       r = floor(r)
       ctx.strokeRect(r.x, r.y, r.w, r.h)
+    }
+
+    function fillRect(r) {
+      r = floor(r)
+      ctx.fillRect(r.x, r.y, r.w, r.h)
     }
 
     function text(t, x, y) {
       ctx.fillText(t, x, y)
     }
 
-    function clear() {
-      ctx.clearRect(bounds.x, bounds.y, bounds.w, bounds.h)
+    function clear(r) {
+      ctx.clearRect(r.x, r.y, r.w, r.h)
     }
 
-    return {clear, line, circle, rect, text}
+    return {clear, line, strokeCircle, fillCircle,  strokeRect, fillRect, text}
   }
 
   return View

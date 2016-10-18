@@ -123,7 +123,7 @@ define([
     const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
         const initMessage = prefix(`${direction} Init`)
-        logger.log(`${initMessage} ${refIdLabel(message.rootRef)}]`)
+        logger.log(`${initMessage} ${refIdLabel(message.rootRef)}`)
       },
       [Messages.Types.Batch]: (message, direction) => {
         logger.group(prefix(batchLabel(direction, message.rpcMessages)))

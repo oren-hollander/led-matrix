@@ -107,32 +107,34 @@ requirejs([
     })
   })
 
-  let stations = {}
+  let devices = {}
 
-  const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
+  // const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
+  const uniqueDeviceId = () => '00000'
 
   function createRpcChannel(socket){
     WebSocketChannelMessenger(socket).then(messenger => {
       const channel = messenger.createChannel(1)
-      MessageRpc(channel, JsonSerializer, RpcMonitor('server', NodeConsoleLogger())).then(rpc => {
+      MessageRpc(channel, JsonSerializer /*, RpcMonitor('server', NodeConsoleLogger())*/).then(rpc => {
 
         const serverApi = {
-          registerStation: station => {
-            const stationId = uniqueDeviceId()
-            stations[stationId] = {api: station, messenger}
-            return stationId
+          registerDevice: deviceApi => {
+            const deviceId = uniqueDeviceId()
+            devices[deviceId] = {api: deviceApi, messenger}
+            return deviceId
           },
-          connectPad: stationId => {
-            if(!stations[stationId]) {
-              throw new Error(`Can't connect to station '${stationId}'`)
+          connectToDevice: (deviceId, sourceChannelNumber) => {
+            if(!devices[deviceId]) {
+              throw new Error(`Can't connect to device '${deviceId}'`)
             }
             else {
-              return stations[stationId].api.createPadChannel().then(padChannelNumber => {
-                const padChannel = messenger.createChannel(padChannelNumber)
-                const stationChannel = stations[stationId].messenger.createChannel(padChannelNumber)
-                Relay(padChannel, stationChannel)
-                stations[stationId].api.connectPad(padChannelNumber)
-                return padChannelNumber
+              const device = devices[deviceId].api
+              const deviceMessenger = devices[deviceId].messenger
+              return device.createSignalingChannel().then(targetChannelNumber => {
+                const sourceSignalingChannel = messenger.createChannel(sourceChannelNumber)
+                const targetSignalingChannel = deviceMessenger.createChannel(targetChannelNumber)
+                Relay(sourceSignalingChannel, targetSignalingChannel)
+                device.connectDevice(targetChannelNumber)
               })
             }
           }
@@ -143,15 +145,3 @@ requirejs([
     })
   }
 })
-
-/*
-
-  0. devices setup rpc channel with server
-  1. server calls device.getType(), devices return their type
-  1. station & pads call server.registerDevice(), receives device id, each on its own time
-  2. station shows its device id on screen, to let player enter it in pad
-  3. pad shows station device id entry ui
-  4. pad calls server.connectPad(padDeviceId, stationDeviceId)
-  5. server calls station.connectPad(padApi) // pad api
-
-*/

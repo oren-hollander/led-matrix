@@ -2,35 +2,23 @@
 
 define([], () => {
 
-  function Screen(component, canvas){
-    let stopped = false
+  function Screen(canvas){
     const ctx = canvas.getContext('2d')
+    let paintFunction
 
     function paint() {
-      ctx.fillStyle = 'white'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      // ctx.beginPath()
-      // ctx.moveTo(0, 0)
-      // ctx.lineTo(canvas.width, canvas.height)
-      // ctx.stroke()
-
-      if(!component.shouldPaint || component.shouldPaint())
-        component.paint(ctx)
-
-      if(!stopped)
-        window.requestAnimationFrame(paint)
-    }
-
-    function start() {
-      stopped = false
       window.requestAnimationFrame(paint)
+      if(paintFunction)
+        paintFunction(ctx, canvas.width, canvas.height)
     }
 
-    function stop() {
-      stopped = true
+    paint()
+
+    function setPainter(pf) {
+      paintFunction = pf
     }
 
-    return {start, stop}
+    return {setPainter}
   }
 
   return Screen

@@ -3,13 +3,11 @@
 define([
   'lodash',
   'util/relay',
-  'rpc/messenger',
   'rpc/messenger'
 ], (
   _,
   Relay,
-  {createMockWorkerPair},
-  {WebWorkerChannelMessenger}
+  {createMockWorkerPair, createMockSocketPair, WebWorkerChannelMessenger, WebSocketChannelMessenger}
 ) => {
 
   describe('Relay', () => {
@@ -33,7 +31,7 @@ define([
       })
     })
 
-    it('should connect two sets of messengers', done => {
+    it('should connect two sets of worker messengers', done => {
 
       Relay(channelB, channelC)
 
@@ -45,4 +43,39 @@ define([
       channelA.send('hello')
     })
   })
+
+  describe('Relay', () => {
+
+    let channelA, channelB, channelC, channelD
+
+    beforeEach(done => {
+      const [socketA, socketB] = createMockSocketPair()
+      const [socketC, socketD] = createMockSocketPair()
+      Promise.all([
+        WebSocketChannelMessenger(socketA),
+        WebSocketChannelMessenger(socketB),
+        WebSocketChannelMessenger(socketC),
+        WebSocketChannelMessenger(socketD)
+      ]).then(([messengerA, messengerB]) => {
+        channelA = messengerA.createChannel(1)
+        channelB = messengerB.createChannel(1)
+        channelC = messengerB.createChannel(1)
+        channelD = messengerB.createChannel(1)
+        done()
+      })
+    })
+
+    it('should connect two sets of socket messengers', done => {
+
+      Relay(channelB, channelC)
+
+      channelD.setReceiver(message => {
+        expect(message).toEqual('hello')
+        done()
+      })
+
+      channelA.send('hello')
+    })
+  })
+
 })

@@ -25,8 +25,8 @@ requirejs([
   'serialization/json-serializer'
 ], (
   _,
-  MessageRpc,
-  {WebSocketMessenger},
+  MessageRPC,
+  {WebSocketChannelMessenger},
   {RemoteApi},
   Relay,
   JsonSerializer
@@ -94,75 +94,45 @@ requirejs([
 
   console.log('Starting WebSocket server')
 
-  const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
   const socketServer = new WebSocketServer({server: httpServer})
-
-  const deviceApis = {}
-  const relaySockets = {}
 
   socketServer.on('connection', socket => {
     socket.on('close', () => {
       console.log('socket closed')
     })
 
-    socket.on('message', strMessage => {
-      console.log(`message: ${strMessage}`)
-      const message = JSON.parse(strMessage)
-      switch (message.type) {
-        case 'signal':
-          socket.on('message', () => {})
-          connectSignalChannel(socket)
-          break
-        case 'rtc':
-          socket.on('message', () => {})
-          connectRtcChannel(socket, message.relayId)
-          break
-      }
-    })
-
-
-    function connectSignalChannel(socket) {
-      let deviceApi
-
-      const signalApi = {
-        registerDevice: () => {
-          const deviceId = uniqueDeviceId()
-          console.log('-------- registerDevice --------')
-          console.log('registering', deviceId)
-          deviceApis[deviceId] = deviceApi
-          console.log(deviceApis[deviceId])
-          console.log('--------------------------------')
-          return deviceId
-        },
-        connectDevice: targetDeviceId => {
-          console.log('-------- connectDevice ---------')
-          console.log('connect device', targetDeviceId)
-          console.log(targetDeviceId)
-          console.log(deviceApis[targetDeviceId])
-          const relayId = uniqueDeviceId()
-          deviceApis[targetDeviceId].connectDevice(relayId)
-          console.log('--------------------------------')
-          return relayId
-        }
-      }
-
-      MessageRpc(RemoteApi(signalApi), WebSocketMessenger(socket), JsonSerializer).then(rpc => {
-        deviceApi = rpc.api
-      })
-    }
-
-    function connectRtcChannel(socket, relayId) {
-      console.log('--------- connectRtcChannel --------------')
-      if(relaySockets[relayId]){
-        console.log('second socket', relayId)
-        Relay(WebSocketMessenger(relaySockets[relayId]), WebSocketMessenger(socket))
-        delete relaySockets[relayId]
-      }
-      else {
-        console.log('first socket', relayId)
-        relaySockets[relayId] = socket
-      }
-      console.log('--------------------------------')
-    }
+    connectSignalChannel(socket)
   })
+
+  let firstConnectFunction
+  let firstMessenger
+
+  function connectSignalChannel(socket) {
+    WebSocketChannelMessenger(socket).then(messenger => {
+      MessageRPC(messenger.createChannel(1), JsonSerializer)
+        .then(rpc => {
+          rpc.connect().then(connectFunction => {
+            if(!firstConnectFunction){
+              firstConnectFunction = connectFunction
+              firstMessenger = messenger
+            }
+            else {
+              Relay(firstMessenger.createChannel(2), messenger.createChannel(2))
+              firstConnectFunction(true)
+              connectFunction(false)
+              firstConnectFunction = undefined
+              firstMessenger = undefined
+            }
+          }).catch(e => {
+            console.log('connect error', e)
+          })
+        })
+        .catch(e => {
+          console.log('rpc error', e)
+        })
+    }).catch(e => {
+      console.log('channel error', e)
+    })
+  }
+
 })

@@ -2,29 +2,17 @@
 
 define([
   'lodash',
-  'rpc/messenger',
-  'rpc/message-rpc',
-  'serialization/native-serializer',
-  'rpc/remote'
+  'rpc/messenger'
 ], (
   _,
-  {createMockWorkerPair},
-  MessageRPC,
-  NativeSerializer,
-  {RemoteApi}
+  {WebRTCChannel}
 ) => {
 
-  const connect = rpc => rpc.connect()
 
-  describe('Mock Messenger', () =>  {
+  describe('WebRTC channel', () =>  {
 
-    let workerA, workerB
+    it('should exchange messages', done => {
 
-    beforeEach(() => {
-      [workerA, workerB] = createMockWorkerPair()
-    })
-
-    xit('should ', done => {
     })
   })
 })

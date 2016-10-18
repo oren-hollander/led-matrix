@@ -13,14 +13,17 @@ define([
     const {promise, resolve} = createPromiseWithSettler()
 
     let receivers = []
-
+    let initialized = false
     worker.onmessage = ({data}) => {
       if(data.channel === 0) {
         switch(data.message){
           case 'init':
             worker.postMessage({channel: 0, message: 'init-ack'})
           case 'init-ack':
-            resolve({createChannel})
+            if(!initialized){
+              initialized = true
+              resolve({createChannel})
+            }
         }
       }
       else {
@@ -68,8 +71,6 @@ define([
       if(message.channel === 0) {
         switch(message.message){
           case 'init':
-            socket.send(JSON.stringify({channel: 0, message: 'init-ack'}))
-          case 'init-ack':
             resolve({createChannel})
         }
       }
@@ -77,6 +78,8 @@ define([
         const receiver = receivers[message.channel]
         if(receiver)
           receiver(message.message)
+        else
+          console.log('no receiver')
       }
     }
 
@@ -100,6 +103,18 @@ define([
     return promise
   }
 
+  function WebRTCChannel(rtcChannel){
+    return {
+      send: message => {
+        rtcChannel.send(message)
+      },
+      setReceiver: callback => {
+        rtcChannel.onmessage = ({data}) => callback(data)
+      }
+    }
+  }
+
+
   function createMockWorkerPair() {
     const a = {
       postMessage: message => {
@@ -117,5 +132,22 @@ define([
     return [a, b]
   }
 
-  return {createMockWorkerPair, WebWorkerChannelMessenger, WebSocketChannelMessenger}
+  function createMockSocketPair() {
+    const a = {
+      send: message => {
+        if(b.onmessage)
+          _.defer(b.onmessage, {data: message})
+      }
+    }
+    const b = {
+      send: message => {
+        if(a.onmessage)
+          _.defer(a.onmessage, {data: message})
+      }
+    }
+
+    return [a, b]
+  }
+
+  return {createMockWorkerPair, createMockSocketPair, WebWorkerChannelMessenger, WebSocketChannelMessenger, WebRTCChannel}
 })
