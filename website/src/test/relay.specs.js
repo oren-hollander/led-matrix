@@ -52,10 +52,10 @@ define([
       const [socketA, socketB] = createMockSocketPair()
       const [socketC, socketD] = createMockSocketPair()
       Promise.all([
-        WebSocketChannelMessenger(socketA),
         WebSocketChannelMessenger(socketB),
-        WebSocketChannelMessenger(socketC),
-        WebSocketChannelMessenger(socketD)
+        WebSocketChannelMessenger(socketA),
+        WebSocketChannelMessenger(socketD),
+        WebSocketChannelMessenger(socketC)
       ]).then(([messengerA, messengerB]) => {
         channelA = messengerA.createChannel(1)
         channelB = messengerB.createChannel(1)

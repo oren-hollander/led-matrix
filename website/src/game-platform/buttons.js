@@ -8,12 +8,7 @@ define([
   {pointInCircle}
 ) => {
 
-  const Buttons = () => {
-    let buttons = []
-
-    function add(button) {
-      buttons.push(button)
-    }
+  const Buttons = buttons => {
 
     function pressButton(button) {
       if(!button.pressed) {
@@ -40,11 +35,7 @@ define([
       })
     }
 
-    function clear() {
-      buttons = []
-    }
-
-    const api = {add, updateTouches, clear, onPress: undefined, onRelease: undefined}
+    const api = {updateTouches, onPress: undefined, onRelease: undefined}
 
     return api
   }

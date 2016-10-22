@@ -2,25 +2,89 @@
 
 define([
   'lodash',
-  'game-platform/colors'
+  'util/promise',
+  'game-platform/colors',
+  'game-platform/buttons',
+  'geometry/geometry'
 ], (
   _,
-  Colors
+  {createPromise},
+  Colors,
+  Buttons,
+  {Point, pointInCircle}
 ) => {
-  function PadScreen (canvas, pad){
-    const ctx = canvas.getContext('2d')
+  function PadScreen(){
+    let ctx, width, height, promise, backgroundColor, station, padId
+
+    let buttons = []
+    const buttonTouches = Buttons(buttons)
+
+    function mouseUp(x, y){
+      const p = Point(x, y)
+      _.forEach(buttons, button => {
+        if(pointInCircle(p, button)){
+          station.onRelease(padId, button.name)
+        }
+      })
+    }
+
+    function mouseDown(x, y) {
+      const p = Point(x, y)
+      _.forEach(buttons, button => {
+        if(pointInCircle(p, button)){
+          station.onPress(padId, button.name)
+        }
+      })
+    }
+
+    function show(context, w, h, stationApi, padApi){
+      station = stationApi
+
+      padApi.setPadId = pid => {
+        padId = pid
+      }
+
+      padApi.createButton = (name, x, y, r, color) => {
+        buttons.push({name, x, y, r, color, pressed: false})
+      }
+
+      padApi.getBounds = () => ({w, h})
+      padApi.setBackgroundColor = color => {
+        backgroundColor = color
+      }
+
+      padApi.reset = () => {
+        buttons = []
+      }
+
+      buttons.onPress = stationApi.onPress
+      buttons.onRelease = stationApi.onRelease
+
+      ctx = context
+      width = w
+      height = h
+      promise = createPromise()
+      return promise
+    }
+
 
     function paint(){
-      window.requestAnimationFrame(paint)
-      ctx.fillStyle = Colors.primary[0]
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = backgroundColor
+      ctx.fillRect(0, 0, width, height)
+
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.font = '48px sans-serif'
-      ctx.fillStyle = Colors.primary[4]
-      ctx.fillText('Connecting...', canvas.width / 2, canvas.height / 2)
+
+      _.forEach(buttons, button => {
+        ctx.fillStyle = button.color
+        ctx.beginPath()
+        ctx.arc(button.x, button.y, button.r, 0, Math.PI * 2)
+        ctx.fill()
+      })
     }
-    paint()
+
+    return {show, paint, mouseUp, mouseDown, updateTouches: buttonTouches.updateTouches}
   }
 
   return PadScreen

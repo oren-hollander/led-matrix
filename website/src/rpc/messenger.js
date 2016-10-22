@@ -14,6 +14,7 @@ define([
 
     let receivers = []
     let initialized = false
+
     worker.onmessage = ({data}) => {
       if(data.channel === 0) {
         switch(data.message){
@@ -64,6 +65,7 @@ define([
   function WebSocketChannelMessenger(socket) {
     const {promise, resolve} = createPromiseWithSettler()
 
+    let initialized = false
     let receivers = []
 
     socket.onmessage = ({data}) => {
@@ -71,7 +73,12 @@ define([
       if(message.channel === 0) {
         switch(message.message){
           case 'init':
-            resolve({createChannel})
+            socket.send(JSON.stringify({channel: 0, message: 'init-ack'}))
+          case 'init-ack':
+            if(!initialized){
+              initialized = true
+              resolve({createChannel})
+            }
         }
       }
       else {
@@ -113,7 +120,6 @@ define([
       }
     }
   }
-
 
   function createMockWorkerPair() {
     const a = {

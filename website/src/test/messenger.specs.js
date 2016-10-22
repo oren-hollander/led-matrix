@@ -8,8 +8,7 @@ define([
   {WebRTCChannel}
 ) => {
 
-
-  describe('WebRTC channel', () =>  {
+  xdescribe('WebRTC channel', () =>  {
 
     it('should exchange messages', done => {
 

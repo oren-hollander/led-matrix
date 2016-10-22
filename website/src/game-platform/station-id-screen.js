@@ -18,21 +18,45 @@ define([
   Colors
 ) => {
 
-  function StationIdScreen(deviceId){
+  function StationIdScreen(){
 
-    function paint(ctx, width, height){
-      window.requestAnimationFrame(paint)
+    let ctx, width, height, promise, state
+
+    function show(context, w, h, screenState) {
+      ctx = context
+      width = w
+      height = h
+      state = screenState
+      promise = createPromise()
+      return promise
+    }
+
+    function paint(){
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.font = '48px sans-serif'
+      ctx.font = '72px sans-serif'
       ctx.fillStyle = Colors.primary[4]
       ctx.fillRect(0, 0, width, height)
 
       ctx.fillStyle = Colors.primary[0]
-      ctx.fillText(deviceId, width / 2, height / 2)
+      ctx.fillText(state.stationId, width / 2, height / 2)
+
+      if(state.pads.length === 0){
+        ctx.fillText('No pads connected', width / 2, height / 2 + height / 9)
+      }
+      else {
+        state.pads.forEach((pad, i) => {
+          ctx.fillStyle = state.colors[i][0]
+          ctx.fillText(`Pad ${i + 1} connected`, width / 2, height / 2 + (i + 1) * (height / 9))
+        })
+      }
     }
 
-    paint()
+    function close(){
+      promise.resolve()
+    }
+
+    return {show, paint, close}
   }
 
   return StationIdScreen

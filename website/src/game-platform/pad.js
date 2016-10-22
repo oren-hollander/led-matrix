@@ -1,9 +1,14 @@
 'use strict'
 
-define([], () => {
+define([
+  'game-platform/buttons'
+], (
+  Buttons
+) => {
 
-  function Pad(buttons) {
+  function Pad() {
     let station
+    const buttons = Buttons()
 
     const pad = {
       buttonPressed: button => {

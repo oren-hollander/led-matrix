@@ -29,7 +29,8 @@ require(['jasmine-boot'], function () {
     'test/messenger.specs',
     'test/binary-serializer.specs',
     'test/rpc-channel.specs',
-    'test/outgoing-message-queue.specs'
+    'test/outgoing-message-queue.specs',
+    'test/jskell.specs'
   ], function(){
     window.onload();
   })

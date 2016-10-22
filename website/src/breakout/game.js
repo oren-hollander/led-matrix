@@ -381,6 +381,7 @@ define([
     station.text(gameState.player1.score, 3 * courtWidth / 4, 100)
     station.color(player2BallColor)
     station.text(gameState.player2.score, courtWidth / 4, 100)
+    station.paint()
     if(gameOver()){
 
     }
@@ -389,9 +390,91 @@ define([
     }
   }
 
-  function start(stationApi) {
+  function start(stationApi, pads) {
     station = stationApi
+
+    _.forEach(pads, (pad, i) => {
+      const color = i === 0 ? pad1Color : pad2Color
+        pad.getBounds().then(bounds => {
+          const size = Math.min(bounds.w, bounds.h)
+          pad.createButton('front-up',   0.25 * bounds.w, 0.25 * bounds.h, 0.1 * size, color)
+          pad.createButton('front-down', 0.25 * bounds.w, 0.75 * bounds.h, 0.1 * size, color)
+          pad.createButton('back-up',    0.75 * bounds.w, 0.25 * bounds.h, 0.1 * size, color)
+          pad.createButton('back-down',  0.75 * bounds.w, 0.75 * bounds.h, 0.1 * size, color)
+        })
+    })
+
     paint()
+  }
+
+  function onPress(padId, button){
+    if(padId === 0){
+      switch(button) {
+        case 'front-up':
+          frontPad1UpPressed()
+          break
+        case 'front-down':
+          frontPad1DownPressed()
+          break
+        case 'back-up':
+          backPad1UpPressed()
+          break
+        case 'back-down':
+          backPad1DownPressed()
+          break
+      }
+    }
+    else if (padId === 1){
+      switch(button) {
+        case 'front-up':
+          frontPad2UpPressed()
+          break
+        case 'front-down':
+          frontPad2DownPressed()
+          break
+        case 'back-up':
+          backPad2UpPressed()
+          break
+        case 'back-down':
+          backPad2DownPressed()
+          break
+      }
+    }
+  }
+
+  function onRelease(padId, button){
+    if(padId === 0){
+      switch(button) {
+        case 'front-up':
+          frontPad1UpReleased()
+          break
+        case 'front-down':
+          frontPad1DownReleased()
+          break
+        case 'back-up':
+          backPad1UpReleased()
+          break
+        case 'back-down':
+          backPad1DownReleased()
+          break
+      }
+    }
+    else if (padId === 1){
+      switch(button) {
+        case 'front-up':
+          frontPad2UpReleased()
+          break
+        case 'front-down':
+          frontPad2DownReleased()
+          break
+        case 'back-up':
+          backPad2UpReleased()
+          break
+        case 'back-down':
+          backPad2DownReleased()
+          break
+      }
+    }
   }
 
   function frontPad1UpPressed(){
@@ -460,21 +543,7 @@ define([
 
   return {
     start,
-    frontPad1UpPressed,
-    frontPad1DownPressed,
-    backPad1UpPressed,
-    backPad1DownPressed,
-    frontPad2UpPressed,
-    frontPad2DownPressed,
-    backPad2UpPressed,
-    backPad2DownPressed,
-    frontPad1UpReleased,
-    frontPad1DownReleased,
-    backPad1UpReleased,
-    backPad1DownReleased,
-    frontPad2UpReleased,
-    frontPad2DownReleased,
-    backPad2UpReleased,
-    backPad2DownReleased
+    onPress,
+    onRelease
   }
 })

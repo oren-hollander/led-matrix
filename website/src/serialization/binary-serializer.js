@@ -32,7 +32,7 @@ define([
     Messages.Types.SharedObject
   ])
 
-  function BinarySerializer(valueSerializers, monitor) {
+  function BinarySerializer(valueSerializers) {
     const valueSerializerCodes = Enum(_(valueSerializers).keys().sortBy().value())
 
     function writeInit(writer, init){

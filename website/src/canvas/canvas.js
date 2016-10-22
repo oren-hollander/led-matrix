@@ -35,7 +35,6 @@ define([
     canvas.style.height = px(h)
   }
 
-
   function stretchCanvas(canvas) {
     canvas.width = screen.width * window.devicePixelRatio
     canvas.height = screen.height * window.devicePixelRatio
