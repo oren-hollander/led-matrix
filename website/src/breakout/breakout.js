@@ -29,6 +29,9 @@ require([
 
   const pads = []
   const gameApi = {
+    setScreen: screen => {
+      station = screen
+    },
     setPad: pad => {
       pads.push(pad)
     },
@@ -46,10 +49,5 @@ require([
   WebWorkerChannelMessenger(self)
     .then(messenger => messenger.createChannel(1))
     .then(_.partial(MessageRPC, _, JsonSerializer))
-    .then(rpc => {
-      rpc.connect(RemoteApi(gameApi)).then(stationApi => {
-        station = stationApi
-      })
-    })
-
+    .then(rpc => rpc.connect(RemoteApi(gameApi)))
 })

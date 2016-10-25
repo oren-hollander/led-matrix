@@ -101,7 +101,7 @@ define([
       const view = View(ctx)
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.font = '48px sans-serif'
+      view.font(buttonRadius * 1.8)
 
       // draw code boxes
       ctx.fillStyle = Colors.secondary1[0]

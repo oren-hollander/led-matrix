@@ -15,6 +15,16 @@ define([
 
       return Cons(f(l.head), List.fmap(f)(l.tail))
     },
+    pure: a => Cons(a, Nil),
+    seq: lf => la => {
+      if(la === Nil)
+        return Nil
+
+      if(lf === Nil)
+        throw new Error('')
+
+      return(List.Cons(List.head(lf)(List.head(la)), List.seq(List.tail(lf))(List.tail(la))))
+    },
     foldl: f => z => l => {
       if(l === Nil)
         return z

@@ -24,8 +24,8 @@ define([
       return promise
     }
 
-    function paintReady(ops){
-      frameOps = _.concat(frameOps, ops)
+    function paintFrame(ops){
+      frameOps = ops
     }
 
     function paint() {
@@ -57,7 +57,7 @@ define([
       }
     }
 
-    return {show, paint, paintReady}
+    return {show, paint, paintFrame}
   }
 
   return GameScreen

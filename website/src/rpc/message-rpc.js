@@ -29,6 +29,7 @@ define([
     const settlers = new Map()
     const stubs = RefMap()
     const proxies = RefMap()
+    let initialized = false
 
     const {promise: connectPromise, resolve: connectResolve} = createPromiseWithSettler()
     const remoteConnect = RemoteFunction(obj => {
@@ -38,7 +39,6 @@ define([
     const rootRef = stubs.add(remoteConnect)
 
     const {promise: proxyPromise, resolve: resolveInit} = createPromiseWithSettler() // todo: handle reject with timeout
-    sendMessage(Messages.init(rootRef))
 
     const createSharedObject = (properties) => {
       const ref = stubs.reserveRefId()
@@ -247,7 +247,14 @@ define([
 
       switch (message.type) {
         case Messages.Types.Init:
-          onInit(message.rootRef)
+          if(!message.ack)
+            sendMessage(Messages.init(rootRef, true))
+
+          if(!initialized){
+            initialized = true
+            onInit(message.rootRef)
+          }
+
           break
         case Messages.Types.Batch:
           onBatch(message.rpcMessages)
@@ -263,6 +270,7 @@ define([
       }
     }
     channel.setReceiver(onmessage)
+    sendMessage(Messages.init(rootRef, false))
 
     return proxyPromise
   }

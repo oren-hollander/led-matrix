@@ -71,7 +71,7 @@ require([
     colors: padColors
   }
 
-  let frameOps = []
+  let remoteScreens = []
 
   function start(socket) {
     let nextSignalingChannel = 2
@@ -83,15 +83,21 @@ require([
           createSignalingChannel: () => {
             return nextSignalingChannel++
           },
-          connectDevice: channelNumber => {
+          connectPad: channelNumber => {
             MessageRPC(messenger.createChannel(channelNumber), JsonSerializer)
               .then(connectSignalingChannel)
+              .then(connectToPad)
+          },
+          connectScreen: channelNumber => {
+            MessageRPC(messenger.createChannel(channelNumber), JsonSerializer)
+              .then(connectSignalingChannel)
+              .then(connectToScreen)
           }
         }
 
         MessageRPC(messenger.createChannel(1), JsonSerializer)
           .then(rpc => rpc.connect())
-          .then(server => server.registerDevice(RemoteApi(station)))
+          .then(server => server.registerStation(RemoteApi(station)))
           .then(stationId => {
             state.stationId = stationId
             return screens.show('stationIdScreen', state)
@@ -106,74 +112,106 @@ require([
       const connection = new RTCPeerConnection(peerConnectionConfig)
       const serverRemoteApi = RemoteApi(RTCServerRemoteApi(connection))
 
-      rpc.connect(serverRemoteApi)
+      return rpc.connect(serverRemoteApi)
         .then(clientRemoteApi => RTCServer(clientRemoteApi, connection))
         .then(rtcChannel => MessageRPC(WebRTCChannel(rtcChannel), JsonSerializer))
-        .then(connectToPad)
+    }
+
+    function connectToScreen(rpc) {
+     rpc.connect().then(screenApi => {
+       remoteScreens.push(screenApi)
+     })
     }
 
     function connectToPad(rpc) {
+      const padInput = {
+        onPress: undefined,
+        onRelease: undefined
+      }
+
       const stationApi = {
-        onPress: (padId, button) => {},
+        onPress: (padId, button) => {
+          if(padInput.onPress)
+            padInput.onPress(padId, button)
+        },
         onRelease: (padId, button) => {
-          if(button === 'start' && state.pads.length >= 2){
-            screens.screen('stationIdScreen').close()
-          }
+          if(padInput.onRelease)
+            padInput.onRelease(padId, button)
         }
       }
 
       rpc.connect(RemoteApi(stationApi)).then(pad => {
-        if(state.pads.length < 4){
-          pad.setPadId(state.pads.length)
-            .then(pad.getBounds)
-            .then(bounds => {
-              const colors = padColors[state.pads.length]
-              pad.setBackgroundColor(colors[0])
-              state.pads.push({pad, bounds})
-              if(state.pads.length === 2){
-                _.forEach(state.pads, ({pad, bounds}, i) => {
-                  const size = Math.min(bounds.w, bounds.h)
-                  pad.createButton('start', bounds.w / 2, bounds.h / 2, size * 0.35, padColors[i][4])
-                })
-              }
-            })
-        }
+        pad.setPadId(state.pads.length)
+          .then(pad.getBounds)
+          .then(bounds => {
+            const colors = padColors[state.pads.length]
+            pad.setBackgroundColor(colors[0])
+            state.pads.push({pad, bounds, input: padInput})
+            if(state.pads.length === 2){
+              _.forEach(state.pads, ({pad, bounds}, i) => {
+                const size = Math.min(bounds.w, bounds.h)
+                padInput.onRelease = (padId, button) => {
+                  if(button === 'start' && state.pads.length >= 2){
+                    padInput.onRelease = undefined
+                    screens.screen('stationIdScreen').close()
+                  }
+                }
+
+                pad.createButton('start', bounds.w / 2, bounds.h / 2, size * 0.35, padColors[i][4])
+              })
+            }
+          })
       })
     }
   }
 
   function startGame() {
 
+    let frameOps = []
+
+    const screenApi = {
+      color: color => {
+        frameOps.push({op: 'color', color})
+      },
+      rect: rect => {
+        frameOps.push({op: 'rect', rect})
+      },
+      circle: circle => {
+        frameOps.push({op: 'circle', circle})
+      },
+      box: box => {
+        frameOps.push({op: 'box', box})
+      },
+      text: (text, x, y) => frameOps.push({op: 'text', text, x, y}),
+      paint: () => {
+        screens.screen('gameScreen').paintFrame(frameOps)
+        frameOps = []
+      }
+    }
+
+    remoteScreens.push(screenApi)
+
     WebWorkerChannelMessenger(new Worker('/src/breakout/breakout.js'))
       .then(messenger => messenger.createChannel(1))
       .then(_.partial(MessageRPC, _, JsonSerializer))
-      .then(rpc => {
-        const stationApi = {
-          color: color => {
-            frameOps.push({op: 'color', color})
-          },
-          rect: rect => {
-            frameOps.push({op: 'rect', rect})
-          },
-          circle: circle => {
-            frameOps.push({op: 'circle', circle})
-          },
-          box: box => {
-            frameOps.push({op: 'box', box})
-          },
-          text: (text, x, y) => frameOps.push({op: 'text', text, x, y}),
-          paint: () => {
-            screens.screen('gameScreen').paintReady(frameOps)
-            frameOps = []
-          }
-        }
+      .then(rpc => rpc.connect())
+      .then(gameApi => {
 
-        rpc.connect(RemoteApi(stationApi)).then(gameApi => {
-          _(state.pads)
-            .map(({pad}) => RemoteApi(pad))
-              .forEach(padApi => gameApi.setPad(padApi))
-          gameApi.start()
+        _.forEach(state.pads, ({input}) => {
+          input.onPress = gameApi.onPress
+          input.onRelease = gameApi.onRelease
         })
+
+        _(state.pads)
+          .map(({pad}) => RemoteApi(pad))
+          .forEach(padApi => gameApi.setPad(padApi))
+
+        gameApi.setScreen()
+        _(remoteScreens).forEach(screen => {
+          gameApi.setScreen(RemoteApi(screen))
+        })
+
+        gameApi.start()
       })
   }
 })

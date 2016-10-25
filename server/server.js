@@ -21,7 +21,6 @@ requirejs([
   'rpc/message-rpc',
   'rpc/remote',
   'rpc/messenger',
-  'rpc/monitor',
   'serialization/json-serializer',
   'util/relay'
 ], (
@@ -29,7 +28,6 @@ requirejs([
   MessageRpc,
   {RemoteApi},
   {WebSocketChannelMessenger},
-  {RpcMonitor, NodeConsoleLogger},
   JsonSerializer,
   Relay
 ) => {
@@ -107,39 +105,58 @@ requirejs([
     })
   })
 
-  let devices = {}
+  let stations = {}
 
-  // const uniqueDeviceId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
-  const uniqueDeviceId = () => '00000'
+  // const uniqueStationId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
+  const uniqueStationId = () => '00000'
 
   function createRpcChannel(socket){
     WebSocketChannelMessenger(socket).then(messenger => {
-      const channel = messenger.createChannel(1)
-      MessageRpc(channel, JsonSerializer /*, RpcMonitor('server', NodeConsoleLogger())*/).then(rpc => {
+
+      MessageRpc(messenger.createChannel(1), JsonSerializer).then(rpc => {
+
+        function connectDevice(stationId, sourceChannelNumber)
+        {
+          const station = stations[stationId].api
+          const stationMessenger = stations[stationId].messenger
+          return station.createSignalingChannel().then(targetChannelNumber => {
+            const sourceSignalingChannel = messenger.createChannel(sourceChannelNumber)
+            const targetSignalingChannel = stationMessenger.createChannel(targetChannelNumber)
+            Relay(sourceSignalingChannel, targetSignalingChannel)
+            console.log('relaying...')
+            return targetChannelNumber
+          })
+        }
 
         const serverApi = {
-          registerDevice: deviceApi => {
-            const deviceId = uniqueDeviceId()
-            devices[deviceId] = {api: deviceApi, messenger}
-            return deviceId
+          registerStation: stationApi => {
+            const stationId = uniqueStationId()
+            stations[stationId] = {api: stationApi, messenger}
+            return stationId
           },
-          connectToDevice: (deviceId, sourceChannelNumber) => {
-            if(!devices[deviceId]) {
-              throw new Error(`Can't connect to device '${deviceId}'`)
+          connectPad: (stationId, sourceChannelNumber) => {
+            if(!stations[stationId]) {
+              throw new Error(`Can't connect to station '${stationId}'`)
             }
             else {
-              const device = devices[deviceId].api
-              const deviceMessenger = devices[deviceId].messenger
-              return device.createSignalingChannel().then(targetChannelNumber => {
-                const sourceSignalingChannel = messenger.createChannel(sourceChannelNumber)
-                const targetSignalingChannel = deviceMessenger.createChannel(targetChannelNumber)
-                Relay(sourceSignalingChannel, targetSignalingChannel)
-                device.connectDevice(targetChannelNumber)
-              })
+              return connectDevice(stationId, sourceChannelNumber).then(channel =>
+                stations[stationId].api.connectPad(channel)
+              )
+            }
+          },
+          connectScreen: (stationId, sourceChannelNumber) => {
+            if(!stations[stationId]) {
+              throw new Error(`Can't connect to station '${stationId}'`)
+            }
+            else {
+              return connectDevice(stationId, sourceChannelNumber).then(channel =>
+                stations[stationId].api.connectScreen(channel)
+              )
             }
           }
         }
 
+        console.log('connecting server api...')
         rpc.connect(RemoteApi(serverApi))
       })
     })

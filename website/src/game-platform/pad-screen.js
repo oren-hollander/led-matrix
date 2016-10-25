@@ -18,9 +18,11 @@ define([
 
     let buttons = []
     const buttonTouches = Buttons(buttons)
+    let debugMouse
 
     function mouseUp(x, y){
       const p = Point(x, y)
+      debugMouse = p
       _.forEach(buttons, button => {
         if(pointInCircle(p, button)){
           station.onRelease(padId, button.name)
@@ -67,8 +69,8 @@ define([
       return promise
     }
 
-
     function paint(){
+
       ctx.fillStyle = backgroundColor
       ctx.fillRect(0, 0, width, height)
 
@@ -82,6 +84,14 @@ define([
         ctx.arc(button.x, button.y, button.r, 0, Math.PI * 2)
         ctx.fill()
       })
+
+      if(debugMouse){
+        ctx.fillStyle = 'blue'
+        ctx.beginPath()
+        ctx.arc(debugMouse.x, debugMouse.y, buttons[0].r, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
     }
 
     return {show, paint, mouseUp, mouseDown, updateTouches: buttonTouches.updateTouches}

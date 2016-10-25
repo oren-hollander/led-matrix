@@ -22,7 +22,7 @@ define([], () => {
 
   const rpcMessage = (type, args) => Object.assign({type}, args)
 
-  const init = (rootRef) => ({type: MessageTypes.Init, rootRef})
+  const init = (rootRef, ack) => ({type: MessageTypes.Init, rootRef, ack})
   const batch = rpcMessages => ({type: MessageTypes.Batch, rpcMessages})
   const releaseProxy = ref => ({type: MessageTypes.ReleaseProxy, ref})
   const releaseStub = ref => ({type: MessageTypes.ReleaseStub, ref})

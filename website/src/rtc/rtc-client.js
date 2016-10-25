@@ -14,9 +14,8 @@ define([
     console.log("Unable to create an offer: " + e)
   }
 
-
   function RTCClient(rtcServer, connection) {
-    const channel = connection.createDataChannel('chat')
+    const channel = connection.createDataChannel('api')
     const promise = createPromise()
 
     channel.onopen = () => {

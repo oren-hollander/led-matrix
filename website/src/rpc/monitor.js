@@ -122,7 +122,7 @@ define([
 
     const messageLoggers = {
       [Messages.Types.Init]: (message, direction) => {
-        const initMessage = prefix(`${direction} Init`)
+        const initMessage = prefix(`${direction} Init ${message.ack ? 'ACK ' : ''}`)
         logger.log(`${initMessage} ${refIdLabel(message.rootRef)}`)
       },
       [Messages.Types.Batch]: (message, direction) => {
@@ -508,5 +508,5 @@ define([
     return {queueMessage, drainMessageQueue, outgoingMessage, incomingMessage, serializeStart, serializeEnd, deserializeStart, deserializeEnd, bufferAllocation}
   }
 
-  return {RpcMonitor, StatsMonitor, DevToolsMonitor, ConsoleLogger, NodeConsoleLogger, RemoteLogger, LocalLogger}
+  return {RpcMonitor, ConsoleLogger, StatsMonitor, DevToolsMonitor, NodeConsoleLogger, RemoteLogger, LocalLogger}
 })

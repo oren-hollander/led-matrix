@@ -86,7 +86,7 @@ define([
         if(receiver)
           receiver(message.message)
         else
-          console.log('no receiver')
+          console.log('no receiver', message.channel, message.message)
       }
     }
 
@@ -102,6 +102,7 @@ define([
           socket.send(JSON.stringify({channel, message}))
         },
         setReceiver: callback => {
+          console.log('registering receiver for channel', channel)
           receivers[channel] = callback
         }
       }

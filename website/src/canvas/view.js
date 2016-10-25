@@ -49,7 +49,11 @@ define([
       ctx.clearRect(r.x, r.y, r.w, r.h)
     }
 
-    return {clear, line, strokeCircle, fillCircle,  strokeRect, fillRect, text}
+    function font(size) {
+      ctx.font = `${size}px sans-serif`
+    }
+
+    return {clear, line, strokeCircle, fillCircle,  strokeRect, fillRect, text, font}
   }
 
   return View

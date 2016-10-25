@@ -5,7 +5,7 @@ requirejs.config({
   paths: {
     lodash: ['lib/lodash']
   }
-});
+})
 
 require([
   'lodash',
