@@ -120,7 +120,7 @@ define([
 
       MessageRPC(channelB, NativeSerializer).then(rpc => {
         rpc.connect().then(api => {
-          const f = a => a ** 2
+          const f = a => a * a
           api.applyFunction(RemoteFunction(f), 5).then(r => {
             expect(r).toBe(25)
             done()
@@ -143,7 +143,7 @@ define([
       MessageRPC(channelB, NativeSerializer).then(rpc => {
         rpc.connect().then(api => {
           const mathApi = {
-            pow: a => a ** 2
+            pow: a => a * a
           }
 
           api.applyFunction(RemoteApi(mathApi), 'pow', 5).then(r => {
@@ -194,7 +194,7 @@ define([
 
     })
 
-    describe('Serialization speed test', () => {
+    fdescribe('Serialization speed test', () => {
 
       const connect = rpc => rpc.connect()
       const megaPixelImage = new Array(100000)

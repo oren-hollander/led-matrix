@@ -388,36 +388,6 @@ define([
       }
     }
 
-    // function serializeSingleBuffer(value) {
-    //   const sizeWriter = DataWriter(BufferSizeWriter())
-    //   writeMessage(sizeWriter, value)
-    //   const buffer = new ArrayBuffer(sizeWriter.size())
-    //   const writer = DataWriter(BufferWriter(buffer))
-    //   writeMessage(writer, value)
-    //   return buffer
-    // }
-    //
-    // function deserializeSingleBuffer(buffer) {
-    //   const reader = DataReader(BufferReader(buffer))
-    //   return readMessage(reader)
-    // }
-    //
-    // function serialize(value) {
-    //   const writer = DataWriter(SerialBufferWriter())
-    //   writeMessage(writer, value)
-    //   if(monitor)
-    //     monitor.bufferAllocation(writer.size(), writer.available())
-    //
-    //   return writer.buffers
-    // }
-    //
-    // function deserialize(value) {
-    //   const reader = DataReader(SerialBufferReader(value))
-    //   return readMessage(reader)
-    // }
-
-    // return {serialize: serializeSingleBuffer, deserialize: deserializeSingleBuffer}
-    // return {serialize, deserialize}
     return {writeMessage, readMessage}
   }
 

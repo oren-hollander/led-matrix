@@ -107,8 +107,8 @@ requirejs([
 
   let stations = {}
 
-  // const uniqueStationId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
-  const uniqueStationId = () => '00000'
+  const uniqueStationId = () => ('00000' + Math.floor(Math.random() * 100000)).substr(-5, 5)
+  // const uniqueStationId = () => '00000'
 
   function createRpcChannel(socket){
     WebSocketChannelMessenger(socket).then(messenger => {
